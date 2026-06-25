@@ -21,6 +21,7 @@ export interface Exercise {
   name: string;
   bodyPart: BodyPart;
   equipment: Equipment;
+  brand?: string; // 기구 브랜드 (해머스트렝스 등). 머신 운동에만 사용
   isCustom: boolean;
 }
 

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { appAlert } from '../utils/dialog';
 import { Btn, Label, Pill } from '../components/ui';
-import { BODY_PARTS, EQUIPMENTS } from '../data/exercises';
+import { BODY_PARTS, EQUIPMENT_BRANDS, EQUIPMENTS } from '../data/exercises';
 import { RootStackParamList } from '../navigation';
 import { useApp } from '../store/AppContext';
 import { bodyPartColor, colors, radius, spacing } from '../theme';
@@ -25,6 +25,7 @@ export default function ExercisePickerScreen({ navigation }: Props) {
   const [search, setSearch] = useState('');
   const [partFilter, setPartFilter] = useState<BodyPart | null>(null);
   const [equipFilter, setEquipFilter] = useState<Equipment | null>(null);
+  const [brandFilter, setBrandFilter] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
 
   // 커스텀 운동 폼
@@ -38,10 +39,11 @@ export default function ExercisePickerScreen({ navigation }: Props) {
     return allExercises.filter((e) => {
       if (partFilter && e.bodyPart !== partFilter) return false;
       if (equipFilter && e.equipment !== equipFilter) return false;
+      if (brandFilter && e.brand !== brandFilter) return false;
       if (q && !normalizeName(e.name).includes(q)) return false;
       return true;
     });
-  }, [allExercises, search, partFilter, equipFilter]);
+  }, [allExercises, search, partFilter, equipFilter, brandFilter]);
 
   function toggle(id: string) {
     setSelected((prev) =>
@@ -118,6 +120,23 @@ export default function ExercisePickerScreen({ navigation }: Props) {
               onPress={() =>
                 setEquipFilter(item === '전체기구' ? null : (item as Equipment))
               }
+            />
+          )}
+        />
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={['전체브랜드', ...EQUIPMENT_BRANDS]}
+          keyExtractor={(p) => p}
+          contentContainerStyle={{ paddingBottom: spacing.sm }}
+          renderItem={({ item }) => (
+            <Pill
+              label={item}
+              color={item === '전체브랜드' ? colors.primary : '#C08BFF'}
+              selected={
+                item === '전체브랜드' ? brandFilter === null : brandFilter === item
+              }
+              onPress={() => setBrandFilter(item === '전체브랜드' ? null : item)}
             />
           )}
         />
