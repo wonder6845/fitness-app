@@ -58,12 +58,13 @@
 
 ## 📱 스크린샷
 
-> 추후 추가 예정.
-<!-- assets/screenshots/ 에 이미지를 넣고 아래처럼 표로 추가하세요
-| 홈 | 운동 타이머 | 통계 |
-|---|---|---|
-| ![home](assets/screenshots/home.png) | ![workout](assets/screenshots/workout.png) | ![stats](assets/screenshots/stats.png) |
--->
+| 홈 | 운동 타이머 | 운동 프로그램 |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/01-home.png" width="240"> | <img src="assets/screenshots/07-workout.png" width="240"> | <img src="assets/screenshots/05-programs.png" width="240"> |
+| **통계** | **원판 계산기** | **신체 기록** |
+| <img src="assets/screenshots/03-stats.png" width="240"> | <img src="assets/screenshots/08-plate.png" width="240"> | <img src="assets/screenshots/06-body.png" width="240"> |
+| **내 루틴** | **운동 달력** | |
+| <img src="assets/screenshots/02-routines.png" width="240"> | <img src="assets/screenshots/04-calendar.png" width="240"> | |
 
 ---
 
