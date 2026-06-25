@@ -1,82 +1,178 @@
-# 헬스 기록 앱 (Fitness Tracker)
+# 🏋️ 헬스 기록 앱 (Fitness Tracker)
 
-운동 루틴을 만들고, **운동/휴식 타이머가 자동으로 세트를 진행**하며, 세트별 무게·반복 횟수를 기록하고, 달력·통계로 운동 이력을 확인하는 React Native(Expo) 앱입니다.
+운동 루틴을 만들고, **준비 → 운동 → 휴식 타이머**로 세트를 진행하며, 세트별 무게·횟수·RPE를 기록하고, 달력·통계·신체 변화까지 한곳에서 관리하는 모바일 운동 기록 앱입니다.
 
-요구사항 명세서의 MVP 1차 범위를 모두 구현했습니다.
+서버·계정 없이 **기기 안에서만 동작하는 오프라인 앱**이며, 다크 테마 한국어 UI로 만들어졌습니다.
 
-## 실행 방법
+<p>
+  <img alt="Expo SDK 56" src="https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo&logoColor=white">
+  <img alt="React Native" src="https://img.shields.io/badge/React%20Native-0.85-61DAFB?logo=react&logoColor=black">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white">
+  <img alt="Platform" src="https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-lightgrey">
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-green">
+</p>
 
-> ⚠️ Node.js **20.19.4 이상** 권장 (현재 20.17에서도 번들은 되지만 Expo CLI가 경고를 표시합니다)
+---
+
+## ✨ 주요 기능
+
+### 루틴 · 운동
+- **루틴 CRUD** — 생성/수정/삭제, 운동 순서 변경, 세트 수·운동시간·휴식시간 설정
+- **운동 DB** — 부위(8종)·기구(6종) 필터, 기본 운동 40여 종 + 커스텀 운동 추가(중복 검사)
+- **운동 프로그램** — 바로 가져다 쓰는 추천 루틴 모음
+  - 사이타마 훈련법(원펀맨) · 맨몸 전신 입문 · 코어 집중 10분 · 스트롱리프트 5×5 · 푸시/풀 데이 등
+
+### 운동 타이머 (핵심)
+- **준비 단계** — 세트 시작 전 `3·2·1·GO` 카운트다운 + 비프음, 자동 진행
+- **운동 단계** — 시간이 **위로 올라가는 스톱워치**(자동으로 안 넘어감), **화면을 탭하면** 세트 완료
+- **휴식 단계**
+  - 카운트다운 후 **자동으로 넘어가지 않고** 멈춤 → 준비되면 탭하여 다음 세트
+  - **세트마다 휴식 시간 즉석 조절**(±)
+  - 종료 **3초 전 경고**(라벨 "곧 시작!" + 색 변화 + 비프음), 종료 시 상승 차임
+  - 0초 이후엔 **초과 시간(+00:05)** 을 표시
+- 일시정지/재개, 진동(햅틱) 알림, 운동 중 **화면 항상 켜짐**
+
+### 세트 기록
+- 세트별 **무게 / 반복 / 완료 체크**, 이전 기록 placeholder
+- **세트 유형** — 워밍업 / 드롭 세트(워밍업은 볼륨·PR 계산에서 제외)
+- **슈퍼셋** — 연속 운동을 묶어 `A1 → B1 → 휴식 → A2 → B2` 식으로 교차 진행
+- **RPE**(주관적 운동강도 0~10) 입력칸(선택)
+- 세트 완료 시 **"몇 회 했는지" 기록 모달** → 입력 후 다음으로
+
+### 원판 계산기 🟦🟥
+- 목표 무게 → **한쪽에 끼울 원판 구성**을 그림으로 표시
+- 세트 무게 입력을 **원판 개수 ± 버튼**으로 — 예: `20kg×1 + 5kg×1`(한쪽) → 70kg
+- **바벨 그림이 실시간 반영**(원판 무게에 따라 크기·색이 다름)
+
+### 통계 · 신체 기록
+- 주간 운동 빈도, 부위별 세트 분포, 운동별 **최고 무게·추정 1RM(Epley)**
+- **PR 감지 & 축하** — 신기록 달성 시 완료 화면에서 강조
+- **신체 기록** — 체중·치수 입력 + 변화 추이 라인 차트
+- **달력** — 부위별 색상 마커, 하루 여러 세션 지원, 세션 상세 수정/삭제
+
+### 기타
+- **임시 저장·복구** — 운동 중 자동 저장(draft), 앱 재실행 시 이어하기/저장/삭제 배너
+- **설정** — kg/lb 단위, 진동·카운트다운·화면유지·RPE 표시 토글, 커스텀 운동 관리, 전체 초기화
+
+---
+
+## 📱 스크린샷
+
+> 추후 추가 예정.
+<!-- assets/screenshots/ 에 이미지를 넣고 아래처럼 표로 추가하세요
+| 홈 | 운동 타이머 | 통계 |
+|---|---|---|
+| ![home](assets/screenshots/home.png) | ![workout](assets/screenshots/workout.png) | ![stats](assets/screenshots/stats.png) |
+-->
+
+---
+
+## 🚀 실행 방법
+
+> Node.js **20.19+** 권장
 
 ```bash
-cd fitness-app
-npm install          # 최초 1회
-npm start            # Expo 개발 서버 (QR 코드)
+npm install      # 최초 1회
+npm start        # Expo 개발 서버 (QR 코드)
 ```
 
-- **휴대폰**: Expo Go 앱 설치 후 터미널 QR 코드 스캔
-- **Android 에뮬레이터**: `npm run android`
-- **iOS 시뮬레이터(macOS)**: `npm run ios`
-- **웹 미리보기**: `npm run web`
-
-타입 검사: `npx tsc --noEmit`
-
-## 구현된 기능 (MVP)
-
-| 영역 | 내용 |
+| 실행 대상 | 명령어 |
 |---|---|
-| 루틴 관리 | 생성/저장/수정/삭제, 운동 순서 변경, 세트·운동시간·휴식시간 설정 |
-| 운동 분류 | 부위(8종)·기구(6종) 필터, 기본 운동 40여 종, 커스텀 운동 추가(중복 검사) |
-| 자동 타이머 | 운동→휴식→다음 세트 자동 전환, 일시정지/재개, 세트 건너뛰기, ±15초, 진동 알림, 화면 켜짐 유지 |
-| 세트 기록 | 세트별 무게/반복 입력, 이전 기록 placeholder, 완료 체크, 세트 추가/삭제, 운동 메모 |
-| 세션 저장 | 루틴 스냅샷 보존, 완료/부분완료 구분, 총 볼륨·소요시간 요약 |
-| 임시 저장·복구 | 진행 중 자동 저장(draft), 앱 재실행 시 이어하기/저장/삭제 복구 배너 |
-| 달력 | 부위별 색상 마커, 날짜별 세션 목록(하루 여러 세션 지원), 세션 상세 수정/삭제 |
-| 통계 | 주간 빈도(8주), 부위별 세트 분포(30일), 운동별 최고 무게(PR) |
-| 설정 | kg/lb 단위, 진동·카운트다운·화면유지 토글, 커스텀 운동 관리, 전체 초기화 |
+| 휴대폰(Expo Go에서 QR 스캔) | `npm start` |
+| Android 에뮬레이터 | `npm run android` |
+| iOS 시뮬레이터(macOS) | `npm run ios` |
+| 웹 미리보기 | `npm run web` |
+| 타입 검사 | `npx tsc --noEmit` |
 
-## 명세서 엣지 케이스 대응
+---
 
-- **타이머 일시정지**: 남은 시간 보존(wall-clock 무시), 재개 시 이어서 진행 → `WorkoutScreen.togglePause`
-- **세트 건너뛰기**: `skipped` 플래그 기록, 통계 완료 세트에서 제외 → `gotoNext('skip')`
-- **루틴 중간 종료**: "지금까지 기록 저장" 확인 후 부분 완료(`partial`) 세션 저장 → `confirmEnd` / `computeStatus`
-- **저장 전 앱 종료**: 입력마다 draft 자동 저장, 재실행 시 복구 배너 → `saveDraft` / `HomeScreen` 배너
-- **하루 여러 세션**: 날짜가 아닌 `sessionId` 단위 저장, 달력에서 리스트로 표시
-- **운동명 중복**: 정규화 후 기본/커스텀 중복 검사, 안내 메시지 → `addCustomExercise`
-- **루틴 스냅샷**: 세션 저장 시 루틴 구성을 복사 → 이후 루틴 수정에도 과거 기록 불변
+## 🧱 기술 스택
 
-## 프로젝트 구조
+- **Expo SDK 56** · **React Native 0.85** · **React 19**
+- **TypeScript**(strict) · React Navigation(Tabs + Native Stack)
+- 로컬 저장: `@react-native-async-storage/async-storage`
+- 그래픽/차트: `react-native-svg`(자체 라인 차트·바벨 그림) · `expo-linear-gradient`
+- 피드백: `expo-haptics`(진동) · Web Audio(웹 비프음) · `expo-keep-awake`
+- `react-native-web`으로 브라우저 미리보기 지원
+
+---
+
+## 🗂️ 프로젝트 구조
 
 ```
 App.tsx                      # 네비게이션(탭 + 스택), 테마, Provider
 src/
-  types.ts                   # 데이터 모델 (명세서 9장과 1:1)
-  theme.ts                   # 다크 테마 색상 / 부위별 색
+  types.ts                   # 데이터 모델
+  theme.ts                   # 다크 테마 / 부위별 색
   navigation.ts              # 네비게이션 파라미터 타입
-  data/exercises.ts          # 기본 운동 DB, 부위/기구 목록
+  data/
+    exercises.ts             # 기본 운동 DB, 부위/기구 목록
+    programs.ts              # 추천 운동 프로그램
+    body.ts                  # 신체 측정 항목 정의
   storage/db.ts              # AsyncStorage 영속화 계층
-  store/AppContext.tsx       # 전역 상태(루틴/세션/설정/draft/편집버퍼)
-  utils/helpers.ts           # id, 날짜/시간 포맷, 볼륨 계산
+  store/AppContext.tsx       # 전역 상태(루틴/세션/설정/신체/draft)
+  utils/
+    helpers.ts               # id, 날짜/시간 포맷, 볼륨 계산
+    plates.ts                # 원판 계산(구성/색/크기)
+    strength.ts              # 1RM 추정 · PR 감지 · 운동별 추이
+    sound.ts                 # Web Audio 비프/차임
+    dialog.ts                # 크로스플랫폼 alert
   workout/
-    steps.ts                 # 루틴 → 타이머 단계 시퀀스 생성
-    session.ts               # 기록 초기화, 상태 판정, 세션 빌드
-  components/ui.tsx          # 공통 UI(Card/Btn/Pill 등)
+    steps.ts                 # 루틴 → 타이머 단계 시퀀스(슈퍼셋 교차 포함)
+    session.ts               # 기록 초기화 · 상태 판정 · 세션 빌드
+  components/
+    ui.tsx                   # 공통 UI(Card/Btn/Pill/ProgressRing 등)
+    BarbellGraphic.tsx       # 바벨+원판 그림(공용)
+    PlateCalculator.tsx      # 원판 계산기 모달
+    PlateWeightInput.tsx     # 원판 ± 입력 → 무게
+    LineChart.tsx            # SVG 라인 차트
+    DialogHost.tsx           # 인앱 다이얼로그
   screens/
     HomeScreen.tsx           # 홈(빠른 시작 + 복구 배너 + 요약)
-    RoutinesScreen.tsx       # 루틴 목록
-    RoutineEditScreen.tsx    # 루틴 생성/편집
-    ExercisePickerScreen.tsx # 운동 선택/커스텀 추가
-    WorkoutScreen.tsx        # ⭐ 자동 타이머 + 세트 기록 (핵심)
-    CalendarScreen.tsx       # 달력 + 날짜별 기록
-    SessionDetailScreen.tsx  # 세션 상세/수정/삭제
-    StatsScreen.tsx          # 통계
+    RoutinesScreen.tsx / RoutineEditScreen.tsx / ExercisePickerScreen.tsx
+    ProgramsScreen.tsx / ProgramDetailScreen.tsx   # 운동 프로그램
+    WorkoutScreen.tsx        # ⭐ 타이머 + 세트 기록 (핵심)
+    CalendarScreen.tsx / SessionDetailScreen.tsx   # 달력 · 세션 상세
+    StatsScreen.tsx          # 통계(1RM/PR/분포)
+    BodyScreen.tsx           # 신체 기록
     SettingsScreen.tsx       # 설정
+watch-integration/           # Apple Watch / HealthKit 연동 가이드·코드(별도, 선택)
 ```
 
-## 타이머 동작 핵심
+---
 
-`endTimestamp`(종료 예정 시각)를 기준으로 매 틱마다 `남은시간 = endTimestamp - now`를 계산합니다. `setInterval` 누적 오차가 없고, 백그라운드 복귀 시에도 경과한 단계를 자동으로 따라잡습니다. (`WorkoutScreen.tick`)
+## ⏱️ 타이머 동작 원리
 
-## 데이터 저장
+경과 시간 기준 모델입니다. 각 단계의 시작 시각을 기록하고 매 틱마다 `경과 = 누적 + (실행 중이면 now − 단계시작)` 을 계산해 `setInterval` 누적 오차가 없습니다.
 
-모든 데이터는 기기 로컬(AsyncStorage)에 저장됩니다. 서버/계정 없이 동작하는 오프라인 앱입니다.
+- **준비/휴식** = 카운트다운(남은 시간 = 목표 − 경과)
+- **운동** = 카운트업(경과 그대로 표시), 탭으로만 다음 단계 진행
+
+자세한 구현은 [`src/screens/WorkoutScreen.tsx`](src/screens/WorkoutScreen.tsx)의 `tick` / `goToStep` 참고.
+
+---
+
+## 💾 데이터 저장
+
+모든 데이터는 기기 로컬(AsyncStorage)에 저장됩니다. 서버·계정 없이 동작하며 외부로 전송되는 정보가 없습니다.
+
+| 키 | 내용 |
+|---|---|
+| `fa.routines.v1` | 루틴 |
+| `fa.sessions.v1` | 운동 세션 기록 |
+| `fa.settings.v1` | 설정 |
+| `fa.customExercises.v1` | 커스텀 운동 |
+| `fa.body.v1` | 신체 기록 |
+| `fa.draft.v1` | 진행 중 임시 저장 |
+
+---
+
+## ⌚ Apple Watch / HealthKit (선택)
+
+`watch-integration/` 폴더에 워치 앱 + Apple Health 연동을 위한 가이드와 예제 코드(RN 모듈 + Swift)가 들어 있습니다. watchOS 빌드에는 Mac/Xcode가 필요합니다. 자세한 내용은 [watch-integration/README.md](watch-integration/README.md) 참고.
+
+---
+
+## 📄 라이선스
+
+[MIT](LICENSE)
