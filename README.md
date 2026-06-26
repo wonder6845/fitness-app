@@ -43,6 +43,7 @@
 ### 원판 계산기 🟦🟥
 - 목표 무게 → **한쪽에 끼울 원판 구성**을 그림으로 표시
 - 세트 무게 입력을 **원판 개수 ± 버튼**으로 — 예: `20kg×1 + 5kg×1`(한쪽) → 70kg
+- **무게를 직접 입력하면 원판 자동 배치** — `100`을 치면 한쪽 25+15kg로 자동 계산(못 맞추는 무게는 안내)
 - **바벨 그림이 실시간 반영**(원판 무게에 따라 크기·색이 다름)
 
 ### 통계 · 신체 기록
@@ -126,7 +127,7 @@ src/
     ui.tsx                   # 공통 UI(Card/Btn/Pill/ProgressRing 등)
     BarbellGraphic.tsx       # 바벨+원판 그림(공용)
     PlateCalculator.tsx      # 원판 계산기 모달
-    PlateWeightInput.tsx     # 원판 ± 입력 → 무게
+    PlateWeightInput.tsx     # 원판 ± / 무게 입력 → 원판 자동 계산
     LineChart.tsx            # SVG 라인 차트
     DialogHost.tsx           # 인앱 다이얼로그
   screens/

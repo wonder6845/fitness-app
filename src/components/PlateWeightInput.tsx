@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
+import { parseNum } from '../utils/helpers';
 import {
   computePlates,
   defaultBar,
@@ -39,6 +40,9 @@ export default function PlateWeightInput({
     }
     return init;
   });
+  // 무게 직접 입력값(문자열) + 원판으로 못 맞춘 잔여(한쪽)
+  const [targetText, setTargetText] = useState(() => String(weight || 0));
+  const [leftover, setLeftover] = useState(0);
 
   const calcTotal = (b: number, c: Record<number, number>) =>
     Math.round(
@@ -53,19 +57,41 @@ export default function PlateWeightInput({
     if (!synced.current) {
       synced.current = true;
       onChange(total);
+      setTargetText(String(total));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function apply(b: number, c: Record<number, number>, lo = 0) {
+    const t = calcTotal(b, c);
+    onChange(t);
+    setTargetText(String(t));
+    setLeftover(lo);
+  }
   function setCount(p: number, n: number) {
     const next = { ...counts, [p]: Math.max(0, n) };
     setCounts(next);
-    onChange(calcTotal(bar, next));
+    apply(bar, next);
   }
   function changeBar(d: number) {
     const nb = Math.max(0, Math.round((bar + d) * 100) / 100);
     setBar(nb);
-    onChange(calcTotal(nb, counts));
+    apply(nb, counts);
+  }
+
+  // 입력한 무게를 원판 구성으로 자동 분해 → counts 채우기
+  function applyTarget() {
+    const target = parseNum(targetText);
+    if (!(target > 0)) {
+      setTargetText(String(total));
+      return;
+    }
+    const res = computePlates(target, bar, plates);
+    const next: Record<number, number> = {};
+    for (const p of plates) next[p] = 0;
+    for (const s of res.perSide) next[s.plate] = s.count;
+    setCounts(next);
+    apply(bar, next, res.leftover);
   }
 
   const perSide = plates
@@ -74,14 +100,34 @@ export default function PlateWeightInput({
 
   return (
     <View>
-      {/* 총 무게 + 그림 */}
+      {/* 무게 직접 입력 → 원판 자동 계산 */}
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>무게</Text>
-        <Text style={styles.totalValue}>
-          {total}
-          {unit}
-        </Text>
+        <TextInput
+          style={styles.totalInput}
+          keyboardType="decimal-pad"
+          value={targetText}
+          onChangeText={setTargetText}
+          onSubmitEditing={applyTarget}
+          onBlur={applyTarget}
+          returnKeyType="done"
+          selectTextOnFocus
+        />
+        <Text style={styles.totalUnit}>{unit}</Text>
+        <View style={{ flex: 1 }} />
+        <Pressable style={styles.autoBtn} onPress={applyTarget}>
+          <Text style={styles.autoBtnText}>⚙ 원판 자동</Text>
+        </Pressable>
       </View>
+      {leftover > 0 ? (
+        <Text style={styles.leftoverNote}>
+          원판으로 {Math.round(leftover * 2 * 100) / 100}
+          {unit}는 못 맞춰서 {total}
+          {unit}로 설정했어요
+        </Text>
+      ) : (
+        <Text style={styles.hint}>무게를 입력하면 원판이 자동으로 배치돼요</Text>
+      )}
       <View style={styles.graphic}>
         <BarbellGraphic perSide={perSide} unit={unit} height={84} />
       </View>
@@ -132,9 +178,32 @@ export default function PlateWeightInput({
 }
 
 const styles = StyleSheet.create({
-  totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
+  totalRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   totalLabel: { color: colors.sub, fontSize: 13, fontWeight: '600' },
-  totalValue: { color: colors.text, fontSize: 30, fontWeight: '900', letterSpacing: -0.5 },
+  totalInput: {
+    color: colors.text,
+    fontSize: 30,
+    fontWeight: '900',
+    letterSpacing: -0.5,
+    minWidth: 70,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: radius.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  totalUnit: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  autoBtn: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.sm,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  autoBtnText: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  leftoverNote: { color: '#FFC24B', fontSize: 12, marginTop: 6 },
+  hint: { color: colors.faint, fontSize: 12, marginTop: 6 },
   graphic: {
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
