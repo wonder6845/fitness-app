@@ -79,19 +79,35 @@ export default function PlateWeightInput({
     apply(nb, counts);
   }
 
-  // 입력한 무게를 원판 구성으로 자동 분해 → counts 채우기
-  function applyTarget() {
-    const target = parseNum(targetText);
-    if (!(target > 0)) {
-      setTargetText(String(total));
-      return;
-    }
+  // 입력한 무게를 원판 구성으로 분해
+  function decompose(target: number) {
     const res = computePlates(target, bar, plates);
     const next: Record<number, number> = {};
     for (const p of plates) next[p] = 0;
     for (const s of res.perSide) next[s.plate] = s.count;
+    return { next, leftover: res.leftover };
+  }
+  // 타이핑 즉시: 입력 텍스트는 유지하고 원판/그림만 실시간 반영
+  function onWeightChange(text: string) {
+    setTargetText(text);
+    const target = parseNum(text);
+    if (!(target > 0)) return;
+    const { next, leftover: lo } = decompose(target);
     setCounts(next);
-    apply(bar, next, res.leftover);
+    onChange(calcTotal(bar, next));
+    setLeftover(lo);
+  }
+  // 입력 완료(엔터/포커스 아웃): 실제 맞춰진 무게로 텍스트 정리
+  function normalizeTarget() {
+    const target = parseNum(targetText);
+    if (!(target > 0)) {
+      setTargetText(String(total));
+      setLeftover(0);
+      return;
+    }
+    const { next, leftover: lo } = decompose(target);
+    setCounts(next);
+    apply(bar, next, lo);
   }
 
   const perSide = plates
@@ -107,17 +123,13 @@ export default function PlateWeightInput({
           style={styles.totalInput}
           keyboardType="decimal-pad"
           value={targetText}
-          onChangeText={setTargetText}
-          onSubmitEditing={applyTarget}
-          onBlur={applyTarget}
+          onChangeText={onWeightChange}
+          onSubmitEditing={normalizeTarget}
+          onBlur={normalizeTarget}
           returnKeyType="done"
           selectTextOnFocus
         />
         <Text style={styles.totalUnit}>{unit}</Text>
-        <View style={{ flex: 1 }} />
-        <Pressable style={styles.autoBtn} onPress={applyTarget}>
-          <Text style={styles.autoBtnText}>⚙ 원판 자동</Text>
-        </Pressable>
       </View>
       {leftover > 0 ? (
         <Text style={styles.leftoverNote}>
@@ -193,15 +205,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary,
   },
   totalUnit: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  autoBtn: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: radius.sm,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  autoBtnText: { color: colors.primary, fontSize: 13, fontWeight: '800' },
   leftoverNote: { color: '#FFC24B', fontSize: 12, marginTop: 6 },
   hint: { color: colors.faint, fontSize: 12, marginTop: 6 },
   graphic: {
