@@ -137,9 +137,7 @@ export default function PlateWeightInput({
           {unit}는 못 맞춰서 {total}
           {unit}로 설정했어요
         </Text>
-      ) : (
-        <Text style={styles.hint}>무게를 입력하면 원판이 자동으로 배치돼요</Text>
-      )}
+      ) : null}
       <View style={styles.graphic}>
         <BarbellGraphic perSide={perSide} unit={unit} height={84} />
       </View>
@@ -206,7 +204,6 @@ const styles = StyleSheet.create({
   },
   totalUnit: { color: colors.text, fontSize: 18, fontWeight: '800' },
   leftoverNote: { color: '#FFC24B', fontSize: 12, marginTop: 6 },
-  hint: { color: colors.faint, fontSize: 12, marginTop: 6 },
   graphic: {
     backgroundColor: colors.inputBg,
     borderRadius: radius.md,
