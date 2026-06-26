@@ -134,7 +134,11 @@ export default function HomeScreen({ navigation }: Props) {
             key={p.id}
             program={p}
             wide
-            onPress={() => navigation.navigate('ProgramDetail', { programId: p.id })}
+            onPress={() =>
+              p.id === 'prog-5x5'
+                ? navigation.navigate('FiveByFive')
+                : navigation.navigate('ProgramDetail', { programId: p.id })
+            }
           />
         ))}
       </ScrollView>

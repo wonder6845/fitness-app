@@ -36,6 +36,7 @@ export interface RoutineExercise {
   restSec: number; // 세트 간 휴식 시간(초)
   targetReps?: number; // 목표 반복 횟수 (프로그램에서 가져온 경우 세트 입력에 미리 채워짐)
   supersetGroup?: string; // 같은 값을 가진 연속 운동끼리 슈퍼셋으로 묶임
+  startWeight?: number; // 시작 중량(있으면 세트 무게로 미리 채움) — 5×5 등 프로그램용
 }
 
 export interface Routine {
@@ -85,6 +86,8 @@ export interface WorkoutSession {
   totalVolume: number; // Σ(완료세트 무게 × 횟수)
   records: ExerciseRecord[];
   memo: string;
+  programId?: string; // 5×5 등 프로그램 세션이면 해당 프로그램 id
+  routine?: '5x5-A' | '5x5-B'; // 5×5 Workout A/B 구분
 }
 
 /** 진행 중 운동 임시 저장본 (크래시/강제종료 복구용) */
@@ -97,6 +100,8 @@ export interface WorkoutDraft {
   startedAt: number;
   unit: Unit;
   readySec: number; // 이 운동에 적용된 준비 카운트다운 길이(단계 재구성용)
+  programId?: string; // 5×5 등 프로그램 세션 복구용
+  routine?: '5x5-A' | '5x5-B';
   savedAt: number;
 }
 

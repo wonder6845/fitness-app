@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { BASE_EXERCISES } from '../data/exercises';
+import { FiveByFiveProgram } from '../data/fivexfive';
 import { WorkoutProgram } from '../data/programs';
 import { db } from '../storage/db';
 import {
@@ -54,6 +55,11 @@ interface AppState {
   addBodyEntry: (metric: string, value: number, ts?: number) => void;
   deleteBodyEntry: (id: string) => void;
 
+  // 5×5 프로그램
+  fivexfive: FiveByFiveProgram | null;
+  saveFivexFive: (p: FiveByFiveProgram) => void;
+  clearFivexFive: () => void;
+
   // 설정
   updateSettings: (patch: Partial<Settings>) => void;
 
@@ -84,11 +90,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [draft, setDraft] = useState<WorkoutDraft | null>(null);
   const [draftRoutine, setDraftRoutine] = useState<Routine | null>(null);
   const [bodyLog, setBodyLog] = useState<BodyEntry[]>([]);
+  const [fivexfive, setFivexFive] = useState<FiveByFiveProgram | null>(null);
 
   // 최초 로드
   useEffect(() => {
     (async () => {
-      const [r, s, c, st, d, seeded, body] = await Promise.all([
+      const [r, s, c, st, d, seeded, body, ff] = await Promise.all([
         db.loadRoutines(),
         db.loadSessions(),
         db.loadCustomExercises(),
@@ -96,8 +103,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         db.loadDraft(),
         db.loadSeeded(),
         db.loadBody(),
+        db.loadFivexFive(),
       ]);
       setBodyLog(body);
+      setFivexFive(ff);
       // 첫 실행 시 예시 루틴 1개 시드 (한 번만)
       let routinesToUse = r;
       if (r.length === 0 && !seeded) {
@@ -322,6 +331,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const endEditRoutine = useCallback(() => setDraftRoutine(null), []);
 
+  const saveFivexFive = useCallback((p: FiveByFiveProgram) => {
+    setFivexFive(p);
+    db.saveFivexFive(p);
+  }, []);
+  const clearFivexFive = useCallback(() => {
+    setFivexFive(null);
+    db.saveFivexFive(null);
+  }, []);
+
   const resetAll = useCallback(() => {
     db.clearAll();
     setRoutines([]);
@@ -330,6 +348,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSettings(DEFAULT_SETTINGS);
     setDraft(null);
     setBodyLog([]);
+    setFivexFive(null);
   }, []);
 
   const value: AppState = {
@@ -352,6 +371,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     bodyLog,
     addBodyEntry,
     deleteBodyEntry,
+    fivexfive,
+    saveFivexFive,
+    clearFivexFive,
     updateSettings,
     saveDraft,
     clearDraft,

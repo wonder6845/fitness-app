@@ -17,6 +17,8 @@ import { Loading } from './src/components/ui';
 import { RootStackParamList, TabParamList } from './src/navigation';
 import BodyScreen from './src/screens/BodyScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
+import FiveByFiveScreen from './src/screens/FiveByFiveScreen';
+import FiveByFiveSetupScreen from './src/screens/FiveByFiveSetupScreen';
 import ExercisePickerScreen from './src/screens/ExercisePickerScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProgramDetailScreen from './src/screens/ProgramDetailScreen';
@@ -187,6 +189,16 @@ function Root() {
           name="Body"
           component={BodyScreen}
           options={{ title: '인바디 기록' }}
+        />
+        <Stack.Screen
+          name="FiveByFive"
+          component={FiveByFiveScreen}
+          options={{ title: '5×5 프로그램' }}
+        />
+        <Stack.Screen
+          name="FiveByFiveSetup"
+          component={FiveByFiveSetupScreen}
+          options={{ title: '5×5 설정' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

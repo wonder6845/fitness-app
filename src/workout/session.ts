@@ -18,7 +18,7 @@ export function makeInitialRecords(
     equipment: ex.equipment,
     sets: Array.from({ length: Math.max(1, ex.totalSets) }, (_, i) => ({
       setNo: i + 1,
-      weight: 0,
+      weight: ex.startWeight ?? 0, // 시작 중량(5×5 권장 중량 등)이 있으면 미리 채움
       reps: ex.targetReps ?? 0, // 프로그램 목표 횟수가 있으면 미리 채움
       completed: false,
       skipped: false,
@@ -45,6 +45,8 @@ export function buildSession(params: {
   endedAt: number;
   status: SessionStatus;
   memo?: string;
+  programId?: string;
+  routine?: WorkoutSession['routine'];
 }): WorkoutSession {
   const { startedAt, endedAt } = params;
   return {
@@ -59,6 +61,8 @@ export function buildSession(params: {
     totalVolume: sessionVolume(params.records),
     records: params.records,
     memo: params.memo ?? '',
+    programId: params.programId,
+    routine: params.routine,
   };
 }
 

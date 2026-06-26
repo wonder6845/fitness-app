@@ -56,6 +56,8 @@ interface Meta {
   unit: Unit;
   startedAt: number;
   readySec: number;
+  programId?: string;
+  routine?: '5x5-A' | '5x5-B';
 }
 
 const TICK_MS = 200;
@@ -175,6 +177,8 @@ export default function WorkoutScreen({ navigation, route }: Props) {
         unit: draft.unit,
         startedAt: draft.startedAt,
         readySec,
+        programId: draft.programId,
+        routine: draft.routine,
       });
       setRecords(draft.records);
       setStepIndex(idx);
@@ -186,6 +190,33 @@ export default function WorkoutScreen({ navigation, route }: Props) {
       runningRef.current = false;
       return;
     }
+    // 인라인 루틴(5×5 등 프로그램) — 저장되지 않은 임시 운동
+    const inlineExs = route.params?.exercises;
+    if (inlineExs && inlineExs.length > 0) {
+      const exs = JSON.parse(JSON.stringify(inlineExs)) as RoutineExercise[];
+      const readySec = settings.readyCountdown ? READY_SEC : 0;
+      const startedAt = Date.now();
+      setMeta({
+        exercises: exs,
+        routineId: null,
+        routineName: route.params?.title ?? '5×5',
+        unit: settings.unit,
+        startedAt,
+        readySec,
+        programId: route.params?.programId,
+        routine: route.params?.programRoutine,
+      });
+      setRecords(makeInitialRecords(exs));
+      setStepIndex(0);
+      stepIndexRef.current = 0;
+      baseElapsedRef.current = 0;
+      segmentStartRef.current = Date.now();
+      setDisplayMs(0);
+      setRunning(true);
+      runningRef.current = true;
+      return;
+    }
+
     const id = route.params?.routineId;
     const routine = id ? getRoutine(id) : undefined;
     if (!routine || routine.exercises.length === 0) {
@@ -353,6 +384,8 @@ export default function WorkoutScreen({ navigation, route }: Props) {
         startedAt: meta.startedAt,
         unit: meta.unit,
         readySec: meta.readySec,
+        programId: meta.programId,
+        routine: meta.routine,
         savedAt: Date.now(),
       };
       saveDraft(d);
@@ -427,6 +460,8 @@ export default function WorkoutScreen({ navigation, route }: Props) {
       endedAt,
       status: computeStatus(records),
       memo: sessionMemo.trim(),
+      programId: meta.programId,
+      routine: meta.routine,
     });
     addSession(session);
     clearDraft();

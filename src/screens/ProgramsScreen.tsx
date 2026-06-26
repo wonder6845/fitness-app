@@ -18,7 +18,11 @@ export default function ProgramsScreen({ navigation }: Props) {
         <ProgramCard
           key={p.id}
           program={p}
-          onPress={() => navigation.navigate('ProgramDetail', { programId: p.id })}
+          onPress={() =>
+            p.id === 'prog-5x5'
+              ? navigation.navigate('FiveByFive')
+              : navigation.navigate('ProgramDetail', { programId: p.id })
+          }
         />
       ))}
     </ScrollView>
