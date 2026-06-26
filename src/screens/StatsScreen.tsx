@@ -62,8 +62,8 @@ export default function StatsScreen() {
         <Ionicons name="body-outline" size={20} color={colors.onPrimary} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.bodyTitle}>신체 기록</Text>
-        <Text style={styles.bodySub}>체중 · 신체 치수 추적</Text>
+        <Text style={styles.bodyTitle}>인바디 기록</Text>
+        <Text style={styles.bodySub}>체중 · 체지방 · 골격근량 · BMI 추적</Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color={colors.faint} />
     </Card>

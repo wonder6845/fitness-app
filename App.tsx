@@ -186,7 +186,7 @@ function Root() {
         <Stack.Screen
           name="Body"
           component={BodyScreen}
-          options={{ title: '신체 기록' }}
+          options={{ title: '인바디 기록' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

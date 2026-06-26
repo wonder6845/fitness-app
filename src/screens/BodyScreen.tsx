@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import LineChart, { ChartPoint } from '../components/LineChart';
 import { Btn, Card } from '../components/ui';
-import { BODY_METRICS, BodyMetric, bodyUnit } from '../data/body';
+import { BODY_METRICS, BodyMetric, bmiCategory, bodyUnit, toKg } from '../data/body';
 import { useApp } from '../store/AppContext';
 import { colors, radius, spacing } from '../theme';
 import { parseNum } from '../utils/helpers';
@@ -31,6 +31,26 @@ export default function BodyScreen() {
     return map;
   }, [bodyLog]);
 
+  // BMI = 체중(kg) / 키(m)^2 — 각 체중 기록 시점에 가장 가까운(이전) 키로 계산
+  const bmiPoints = useMemo<ChartPoint[]>(() => {
+    const heights = byMetric['height'] ?? [];
+    const weights = byMetric['weight'] ?? [];
+    if (heights.length === 0 || weights.length === 0) return [];
+    return weights.map((w) => {
+      let h = heights[0].value;
+      for (const hp of heights) {
+        if (hp.ts <= w.ts) h = hp.value;
+        else break;
+      }
+      const m = h / 100;
+      const bmi = m > 0 ? toKg(w.value, settings.unit) / (m * m) : 0;
+      return { ts: w.ts, value: Math.round(bmi * 10) / 10 };
+    });
+  }, [byMetric, settings.unit]);
+
+  const currentBMI = bmiPoints.length ? bmiPoints[bmiPoints.length - 1].value : null;
+  const bmiCat = currentBMI != null ? bmiCategory(currentBMI) : null;
+
   function openEntry(m: BodyMetric) {
     setEditing(m);
     setInput('');
@@ -47,8 +67,41 @@ export default function BodyScreen() {
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.lead}>
-          체중과 신체 치수를 기록하면 변화를 그래프로 볼 수 있어요.
+          키·체중·체지방률·골격근량을 기록하면 인바디 지수처럼 변화를 그래프로 추적할 수 있어요.
         </Text>
+
+        {/* BMI (키·체중으로 자동 계산) */}
+        <Card style={{ marginBottom: spacing.md }}>
+          <View style={styles.head}>
+            <View style={[styles.dot, { backgroundColor: bmiCat?.color ?? colors.faint }]} />
+            <Text style={styles.metricName}>BMI 체질량지수</Text>
+            {currentBMI != null && bmiCat ? (
+              <View style={[styles.bmiBadge, { backgroundColor: bmiCat.color }]}>
+                <Text style={styles.bmiBadgeText}>{bmiCat.label}</Text>
+              </View>
+            ) : null}
+          </View>
+          {currentBMI != null ? (
+            <>
+              <Text style={styles.bmiValue}>{currentBMI}</Text>
+              {bmiPoints.length >= 2 && (
+                <View style={{ marginTop: spacing.sm }}>
+                  <LineChart
+                    data={bmiPoints}
+                    color={bmiCat?.color ?? colors.primary}
+                    unit=""
+                    height={130}
+                  />
+                </View>
+              )}
+            </>
+          ) : (
+            <Text style={styles.onePoint}>
+              키와 체중을 모두 입력하면 BMI가 자동 계산돼요.
+            </Text>
+          )}
+        </Card>
+
         {BODY_METRICS.map((m) => {
           const points = byMetric[m.key];
           const latest = points[points.length - 1];
@@ -139,6 +192,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   onePoint: { color: colors.faint, fontSize: 12, marginTop: spacing.sm },
+  bmiBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  bmiBadgeText: { color: '#0c0d10', fontSize: 12, fontWeight: '900' },
+  bmiValue: {
+    color: colors.text,
+    fontSize: 40,
+    fontWeight: '900',
+    letterSpacing: -1,
+    marginTop: spacing.sm,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

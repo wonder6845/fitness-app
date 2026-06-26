@@ -48,7 +48,7 @@
 ### 통계 · 신체 기록
 - 주간 운동 빈도, 부위별 세트 분포, 운동별 **최고 무게·추정 1RM(Epley)**
 - **PR 감지 & 축하** — 신기록 달성 시 완료 화면에서 강조
-- **신체 기록** — 체중·치수 입력 + 변화 추이 라인 차트
+- **인바디 기록** — 키·체중·체지방률·골격근량 입력 + **BMI 자동 계산**(저체중/정상/과체중/비만 분류), 변화 추이 라인 차트
 - **달력** — 부위별 색상 마커, 하루 여러 세션 지원, 세션 상세 수정/삭제
 
 ### 기타
@@ -62,7 +62,7 @@
 | 홈 | 운동 타이머 | 운동 프로그램 |
 |:---:|:---:|:---:|
 | <img src="assets/screenshots/01-home.png" width="240"> | <img src="assets/screenshots/07-workout.png" width="240"> | <img src="assets/screenshots/05-programs.png" width="240"> |
-| **통계** | **원판 계산기** | **신체 기록** |
+| **통계** | **원판 계산기** | **인바디 기록 (BMI)** |
 | <img src="assets/screenshots/03-stats.png" width="240"> | <img src="assets/screenshots/08-plate.png" width="240"> | <img src="assets/screenshots/06-body.png" width="240"> |
 | **내 루틴** | **운동 달력** | |
 | <img src="assets/screenshots/02-routines.png" width="240"> | <img src="assets/screenshots/04-calendar.png" width="240"> | |
@@ -136,7 +136,7 @@ src/
     WorkoutScreen.tsx        # ⭐ 타이머 + 세트 기록 (핵심)
     CalendarScreen.tsx / SessionDetailScreen.tsx   # 달력 · 세션 상세
     StatsScreen.tsx          # 통계(1RM/PR/분포)
-    BodyScreen.tsx           # 신체 기록
+    BodyScreen.tsx           # 인바디 기록 (BMI 자동 계산)
     SettingsScreen.tsx       # 설정
 watch-integration/           # Apple Watch / HealthKit 연동 가이드·코드(별도, 선택)
 ```
