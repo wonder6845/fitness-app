@@ -19,6 +19,7 @@ import BodyScreen from './src/screens/BodyScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import FiveByFiveScreen from './src/screens/FiveByFiveScreen';
 import FiveByFiveSetupScreen from './src/screens/FiveByFiveSetupScreen';
+import FiveByFiveStatsScreen from './src/screens/FiveByFiveStatsScreen';
 import ExercisePickerScreen from './src/screens/ExercisePickerScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProgramDetailScreen from './src/screens/ProgramDetailScreen';
@@ -199,6 +200,11 @@ function Root() {
           name="FiveByFiveSetup"
           component={FiveByFiveSetupScreen}
           options={{ title: '5×5 설정' }}
+        />
+        <Stack.Screen
+          name="FiveByFiveStats"
+          component={FiveByFiveStatsScreen}
+          options={{ title: '5×5 통계' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

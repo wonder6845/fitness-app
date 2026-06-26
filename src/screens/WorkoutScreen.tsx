@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PlateCalculator from '../components/PlateCalculator';
 import PlateWeightInput from '../components/PlateWeightInput';
+import { FAIL_REASONS } from '../data/fivexfive';
 import { Btn, ProgressRing } from '../components/ui';
 import { RootStackParamList } from '../navigation';
 import { useApp } from '../store/AppContext';
@@ -950,6 +951,35 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                       </Pressable>
                     </View>
 
+                    {/* 목표 미달 시 실패 원인 (선택) */}
+                    {(() => {
+                      const target = meta.exercises[completeSet.exIndex]?.targetReps ?? 0;
+                      if (!(target > 0) || set.reps >= target) return null;
+                      return (
+                        <View style={styles.failBox}>
+                          <Text style={styles.failTitle}>목표 {target}회 미달 — 실패 원인 (선택)</Text>
+                          <View style={styles.failChips}>
+                            {FAIL_REASONS.map((r) => {
+                              const on = set.failReason === r;
+                              return (
+                                <Pressable
+                                  key={r}
+                                  onPress={() =>
+                                    markSet(completeSet.exIndex, completeSet.setNo, {
+                                      failReason: on ? undefined : r,
+                                    })
+                                  }
+                                  style={[styles.failChip, on && styles.failChipOn]}
+                                >
+                                  <Text style={[styles.failChipText, on && styles.failChipTextOn]}>{r}</Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      );
+                    })()}
+
                     {/* 원판으로 무게 입력 */}
                     <PlateWeightInput
                       weight={set.weight}
@@ -1329,6 +1359,27 @@ const styles = StyleSheet.create({
   recExName: { color: colors.text, fontSize: 18, fontWeight: '800', textAlign: 'center' },
   recSetNo: { color: colors.accent, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   recLabel: { color: colors.sub, fontSize: 13, fontWeight: '600' },
+  failBox: {
+    backgroundColor: 'rgba(255,176,32,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,176,32,0.3)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  failTitle: { color: colors.warn, fontSize: 12, fontWeight: '800', marginBottom: 8 },
+  failChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  failChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    backgroundColor: colors.card,
+  },
+  failChipOn: { backgroundColor: colors.warn, borderColor: colors.warn },
+  failChipText: { color: colors.sub, fontSize: 12, fontWeight: '700' },
+  failChipTextOn: { color: '#0c0d10', fontWeight: '800' },
   recRepsRow: {
     flexDirection: 'row',
     alignItems: 'center',

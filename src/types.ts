@@ -59,6 +59,7 @@ export interface SetRecord {
   skipped: boolean; // 건너뛴 세트 여부
   type?: SetType; // 워밍업/드롭 (없으면 일반 세트)
   rpe?: number; // 주관적 운동강도 0~10 (선택)
+  failReason?: string; // 목표 미달 시 실패 원인(선택)
 }
 
 /** 한 운동에 대한 기록 (세트 묶음 + 메모) */

@@ -325,3 +325,147 @@ export function recoveryNote(
   }
   return null;
 }
+
+// ── 실패 원인 ────────────────────────────────────────────────
+export const FAIL_REASONS = [
+  '무게가 너무 무거움',
+  '휴식 부족',
+  '수면 부족',
+  '통증',
+  '자세 불안정',
+  '집중력 저하',
+];
+
+// ── 앱 내 알림 ───────────────────────────────────────────────
+export type AlertTone = 'good' | 'info' | 'warn';
+export interface ProgramAlert {
+  tone: AlertTone;
+  text: string;
+}
+
+export function programAlerts(
+  program: FiveByFiveProgram,
+  state: ProgramState,
+  schedule: ScheduleItem[]
+): ProgramAlert[] {
+  const out: ProgramAlert[] = [];
+  const today = todayYmd();
+
+  const rec = recoveryNote(state, schedule);
+  if (rec) out.push({ tone: 'info', text: rec });
+
+  (Object.keys(state.lifts) as LiftKey[]).forEach((k) => {
+    if (state.lifts[k].deloadPending) {
+      out.push({
+        tone: 'warn',
+        text: `${LIFTS[k].name}: 동일 중량 3회 실패 → 10% 감량(deload)한 ${state.lifts[k].weight}${program.unit}로 재시작을 추천해요.`,
+      });
+    }
+  });
+
+  if (state.lastSessionDate) {
+    const days = Math.round(
+      (parseYmd(today).getTime() - parseYmd(state.lastSessionDate).getTime()) / 86400000
+    );
+    if (days >= 5) {
+      out.push({ tone: 'warn', text: `${days}일째 5×5 운동 기록이 없어요. 오늘 가볍게 다시 시작해볼까요?` });
+    }
+  } else {
+    out.push({ tone: 'info', text: '아직 완료한 5×5 운동이 없어요. 첫 운동을 시작해보세요!' });
+  }
+
+  const todayItem = schedule.find((it) => it.date === today);
+  if (todayItem && todayItem.status === 'today') {
+    out.push({ tone: 'good', text: `오늘은 운동일이에요 — ${routineLabel(state.nextRoutine)} 예정!` });
+  }
+  return out;
+}
+
+// ── 통계 ─────────────────────────────────────────────────────
+export interface LiftStats {
+  key: LiftKey;
+  name: string;
+  maxWeight: number;
+  est1RM: number;
+  attempts: number;
+  successes: number;
+  successRate: number; // %
+  totalVolume: number;
+  series: { ts: number; value: number }[]; // 회차별 사용 중량(성장 그래프)
+}
+export interface ProgramStats {
+  lifts: LiftStats[];
+  totalSessions: number;
+  weeklyCompleted: number;
+  totalVolume: number;
+  recentFailures: { lift: LiftKey; name: string; date: string; weight: number; reason?: string }[];
+}
+
+export function computeProgramStats(
+  program: FiveByFiveProgram,
+  sessions: WorkoutSession[]
+): ProgramStats {
+  const tagged = sessions
+    .filter((s) => s.programId === program.id && tagToRoutine(s.routine))
+    .sort((a, b) => a.startedAt - b.startedAt);
+
+  const lifts: LiftStats[] = (Object.keys(LIFTS) as LiftKey[]).map((key) => {
+    const L = LIFTS[key];
+    let maxWeight = 0, est = 0, attempts = 0, successes = 0, vol = 0;
+    const series: { ts: number; value: number }[] = [];
+    for (const s of tagged) {
+      const rec = s.records.find((r) => r.exerciseName === L.name);
+      if (!rec) continue;
+      attempts++;
+      const completed = rec.sets.filter((x) => x.completed && !x.skipped);
+      const good = completed.filter((x) => x.reps >= L.reps).length;
+      if (good >= L.sets) successes++;
+      for (const x of completed) {
+        if (x.weight > maxWeight) maxWeight = x.weight;
+        vol += x.weight * x.reps;
+        const e = x.weight * (1 + x.reps / 30);
+        if (e > est) est = e;
+      }
+      const sessW = completed.length
+        ? Math.max(...completed.map((x) => x.weight))
+        : rec.sets[0]?.weight ?? 0;
+      series.push({ ts: s.startedAt, value: sessW });
+    }
+    return {
+      key, name: L.name, maxWeight,
+      est1RM: Math.round(est * 10) / 10,
+      attempts, successes,
+      successRate: attempts ? Math.round((successes / attempts) * 100) : 0,
+      totalVolume: Math.round(vol),
+      series,
+    };
+  });
+
+  const now = Date.now();
+  const weeklyCompleted = tagged.filter((s) => now - s.startedAt <= 7 * 86400000).length;
+  const totalVolume = lifts.reduce((t, l) => t + l.totalVolume, 0);
+
+  const recentFailures: ProgramStats['recentFailures'] = [];
+  for (let i = tagged.length - 1; i >= 0 && recentFailures.length < 8; i--) {
+    const s = tagged[i];
+    const r = tagToRoutine(s.routine)!;
+    for (const key of routineLifts(r)) {
+      const L = LIFTS[key];
+      const rec = s.records.find((x) => x.exerciseName === L.name);
+      if (!rec) continue;
+      const good = rec.sets.filter((x) => x.completed && x.reps >= L.reps).length;
+      if (good < L.sets) {
+        const failedSet = rec.sets.find((x) => (x.completed || x.skipped) && x.reps < L.reps);
+        recentFailures.push({
+          lift: key, name: L.name,
+          date: ymd(new Date(s.startedAt)),
+          weight: rec.sets.find((x) => x.completed)?.weight ?? rec.sets[0]?.weight ?? 0,
+          reason: failedSet?.failReason,
+        });
+        if (recentFailures.length >= 8) break;
+      }
+    }
+  }
+
+  return { lifts, totalSessions: tagged.length, weeklyCompleted, totalVolume, recentFailures };
+}

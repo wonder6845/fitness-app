@@ -28,6 +28,7 @@ export type RootStackParamList = {
   Body: undefined;
   FiveByFive: undefined;
   FiveByFiveSetup: { edit?: boolean } | undefined;
+  FiveByFiveStats: undefined;
 };
 
 declare global {

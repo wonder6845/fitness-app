@@ -10,8 +10,8 @@ import {
   fmtDateKo,
   LIFTS,
   nextWorkoutDate,
+  programAlerts,
   recommendationText,
-  recoveryNote,
   routineLabel,
   routineLifts,
   ScheduleStatus,
@@ -45,7 +45,7 @@ export default function FiveByFiveScreen({ navigation }: Props) {
       state,
       schedule,
       next: nextWorkoutDate(schedule),
-      recovery: recoveryNote(state, schedule),
+      alerts: programAlerts(program, state, schedule),
     };
   }, [program, sessions]);
 
@@ -70,7 +70,8 @@ export default function FiveByFiveScreen({ navigation }: Props) {
     );
   }
 
-  const { state, schedule, next, recovery } = derived;
+  const { state, schedule, next, alerts } = derived;
+  const ALERT_COLOR = { good: colors.primary, info: colors.accent, warn: colors.warn };
   const today = todayYmd();
   const doneToday = schedule.some((it) => it.date === today && it.status === 'done');
   const lifts = routineLifts(state.nextRoutine);
@@ -105,13 +106,23 @@ export default function FiveByFiveScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      {/* 회복일/안내 배너 */}
-      {recovery && (
-        <View style={styles.banner}>
-          <Ionicons name="bed-outline" size={18} color={colors.warn} />
-          <Text style={styles.bannerText}>{recovery}</Text>
+      {/* 앱 내 알림 (예정일·회복·미실시·deload 등) */}
+      {alerts.map((a, i) => (
+        <View
+          key={i}
+          style={[
+            styles.banner,
+            { backgroundColor: ALERT_COLOR[a.tone] + '1F', borderColor: ALERT_COLOR[a.tone] + '59' },
+          ]}
+        >
+          <Ionicons
+            name={a.tone === 'warn' ? 'alert-circle-outline' : a.tone === 'good' ? 'flame-outline' : 'information-circle-outline'}
+            size={18}
+            color={ALERT_COLOR[a.tone]}
+          />
+          <Text style={styles.bannerText}>{a.text}</Text>
         </View>
-      )}
+      ))}
 
       {/* 오늘의 운동 */}
       <Card>
@@ -136,6 +147,17 @@ export default function FiveByFiveScreen({ navigation }: Props) {
                     {note}
                   </Text>
                 )}
+                <Pressable
+                  hitSlop={6}
+                  onPress={() =>
+                    appAlert(
+                      `${L.name} 대체 운동`,
+                      '기구가 없거나 통증이 있을 때 이렇게 대체할 수 있어요:\n\n• ' + L.alts.join('\n• ')
+                    )
+                  }
+                >
+                  <Text style={styles.altLink}>대체 운동 보기</Text>
+                </Pressable>
               </View>
               <Text style={styles.liftSpec}>{L.sets}×{L.reps}</Text>
               <Text style={styles.liftWeight}>
@@ -166,6 +188,14 @@ export default function FiveByFiveScreen({ navigation }: Props) {
           📅 다음 추천 운동일: {fmtDateKo(next.date)} · {routineLabel(next.routine ?? state.nextRoutine)}
         </Text>
       )}
+
+      <Btn
+        title="진행 통계 보기"
+        variant="secondary"
+        icon="stats-chart"
+        onPress={() => navigation.navigate('FiveByFiveStats')}
+        style={{ marginTop: spacing.md }}
+      />
 
       {/* 일정 */}
       <Text style={styles.sectionTitle}>운동 일정</Text>
@@ -237,6 +267,7 @@ const styles = StyleSheet.create({
   },
   liftName: { color: colors.text, fontSize: 16, fontWeight: '700' },
   liftNote: { color: colors.sub, fontSize: 12, marginTop: 2 },
+  altLink: { color: colors.accent, fontSize: 12, fontWeight: '700', marginTop: 3 },
   liftSpec: { color: colors.faint, fontSize: 13, fontWeight: '700' },
   liftWeight: { color: colors.text, fontSize: 18, fontWeight: '900', minWidth: 64, textAlign: 'right' },
 
