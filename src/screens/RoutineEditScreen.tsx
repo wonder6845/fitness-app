@@ -230,19 +230,6 @@ export default function RoutineEditScreen({ navigation, route }: Props) {
                 }
               />
               <Stepper
-                label="운동 시간"
-                value={ex.exerciseSec}
-                display={fmtClock(ex.exerciseSec)}
-                onMinus={() =>
-                  patchExercise(i, {
-                    exerciseSec: Math.max(5, ex.exerciseSec - 5),
-                  })
-                }
-                onPlus={() =>
-                  patchExercise(i, { exerciseSec: ex.exerciseSec + 5 })
-                }
-              />
-              <Stepper
                 label="휴식 시간"
                 value={ex.restSec}
                 display={fmtClock(ex.restSec)}

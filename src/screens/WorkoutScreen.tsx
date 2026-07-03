@@ -543,11 +543,11 @@ export default function WorkoutScreen({ navigation, route }: Props) {
   const curEx = curStep ? records[curStep.exIndex] : undefined;
   const nextStepInfo = describeNext(steps, stepIndex, records);
   const prevSets = curEx ? prevSetsByExercise[curEx.exerciseId] : undefined;
-  // 링: 운동=경과 채움 / 준비=남은 / 휴식=남은(초과 시 0)
+  // 링: 운동=스톱워치(1분에 한 바퀴) / 준비=남은 / 휴식=남은(초과 시 0)
   const ringProgress = finished
     ? 0
     : isExercise
-    ? Math.min(1, elapsedMs / stepDurMs)
+    ? (elapsedMs % 60000) / 60000
     : isRest
     ? Math.max(0, Math.min(1, restRemainingMs / restDurMs))
     : Math.max(0, Math.min(1, remainingCalc / stepDurMs));

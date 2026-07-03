@@ -32,7 +32,7 @@ export interface RoutineExercise {
   bodyPart: BodyPart;
   equipment: Equipment;
   totalSets: number;
-  exerciseSec: number; // 1세트 운동 시간(초)
+  exerciseSec: number; // 1세트 예상 운동 시간(초) — 총 소요시간 추정용 (운동 중엔 스톱워치로 자동 진행)
   restSec: number; // 세트 간 휴식 시간(초)
   targetReps?: number; // 목표 반복 횟수 (프로그램에서 가져온 경우 세트 입력에 미리 채워짐)
   supersetGroup?: string; // 같은 값을 가진 연속 운동끼리 슈퍼셋으로 묶임
