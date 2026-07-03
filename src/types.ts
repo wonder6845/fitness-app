@@ -106,6 +106,15 @@ export interface WorkoutDraft {
   savedAt: number;
 }
 
+/** 사용자가 직접 짠 운동 계획 1건 (특정 날짜에 특정 루틴 예정) */
+export interface PlannedWorkout {
+  id: string;
+  date: string; // YYYY-MM-DD
+  routineId: string;
+  routineName: string; // 표시용 스냅샷 (루틴이 삭제돼도 계획은 보임)
+  createdAt: number;
+}
+
 /** 신체 기록 1건 (체중/치수 등 시계열) */
 export interface BodyEntry {
   id: string;

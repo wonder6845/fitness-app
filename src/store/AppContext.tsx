@@ -14,6 +14,7 @@ import {
   BodyEntry,
   DEFAULT_SETTINGS,
   Exercise,
+  PlannedWorkout,
   Routine,
   RoutineExercise,
   Settings,
@@ -60,6 +61,11 @@ interface AppState {
   saveFivexFive: (p: FiveByFiveProgram) => void;
   clearFivexFive: () => void;
 
+  // 운동 계획 (사용자가 짠 일정)
+  plan: PlannedWorkout[];
+  addPlanned: (entries: Omit<PlannedWorkout, 'id' | 'createdAt'>[]) => void;
+  deletePlanned: (id: string) => void;
+
   // 설정
   updateSettings: (patch: Partial<Settings>) => void;
 
@@ -91,11 +97,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [draftRoutine, setDraftRoutine] = useState<Routine | null>(null);
   const [bodyLog, setBodyLog] = useState<BodyEntry[]>([]);
   const [fivexfive, setFivexFive] = useState<FiveByFiveProgram | null>(null);
+  const [plan, setPlan] = useState<PlannedWorkout[]>([]);
 
   // 최초 로드
   useEffect(() => {
     (async () => {
-      const [r, s, c, st, d, seeded, body, ff] = await Promise.all([
+      const [r, s, c, st, d, seeded, body, ff, pl] = await Promise.all([
         db.loadRoutines(),
         db.loadSessions(),
         db.loadCustomExercises(),
@@ -104,9 +111,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         db.loadSeeded(),
         db.loadBody(),
         db.loadFivexFive(),
+        db.loadPlan(),
       ]);
       setBodyLog(body);
       setFivexFive(ff);
+      setPlan(pl);
       // 첫 실행 시 예시 루틴 1개 시드 (한 번만)
       let routinesToUse = r;
       if (r.length === 0 && !seeded) {
@@ -340,6 +349,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     db.saveFivexFive(null);
   }, []);
 
+  const addPlanned = useCallback(
+    (entries: Omit<PlannedWorkout, 'id' | 'createdAt'>[]) => {
+      const now = Date.now();
+      setPlan((prev) => {
+        // 같은 날짜+같은 루틴 중복 계획은 걸러냄
+        const additions = entries
+          .filter(
+            (e) => !prev.some((p) => p.date === e.date && p.routineId === e.routineId)
+          )
+          .map((e) => ({ ...e, id: uid('plan'), createdAt: now }));
+        const next = [...prev, ...additions].sort((a, b) =>
+          a.date.localeCompare(b.date)
+        );
+        db.savePlan(next);
+        return next;
+      });
+    },
+    []
+  );
+  const deletePlanned = useCallback((id: string) => {
+    setPlan((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      db.savePlan(next);
+      return next;
+    });
+  }, []);
+
   const resetAll = useCallback(() => {
     db.clearAll();
     setRoutines([]);
@@ -349,6 +385,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setDraft(null);
     setBodyLog([]);
     setFivexFive(null);
+    setPlan([]);
   }, []);
 
   const value: AppState = {
@@ -374,6 +411,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fivexfive,
     saveFivexFive,
     clearFivexFive,
+    plan,
+    addPlanned,
+    deletePlanned,
     updateSettings,
     saveDraft,
     clearDraft,

@@ -20,6 +20,7 @@ import CalendarScreen from './src/screens/CalendarScreen';
 import FiveByFiveScreen from './src/screens/FiveByFiveScreen';
 import FiveByFiveSetupScreen from './src/screens/FiveByFiveSetupScreen';
 import FiveByFiveStatsScreen from './src/screens/FiveByFiveStatsScreen';
+import PlanEditScreen from './src/screens/PlanEditScreen';
 import ExercisePickerScreen from './src/screens/ExercisePickerScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import ProgramDetailScreen from './src/screens/ProgramDetailScreen';
@@ -205,6 +206,11 @@ function Root() {
           name="FiveByFiveStats"
           component={FiveByFiveStatsScreen}
           options={{ title: '5×5 통계' }}
+        />
+        <Stack.Screen
+          name="PlanEdit"
+          component={PlanEditScreen}
+          options={{ title: '운동 계획 짜기', presentation: 'modal' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

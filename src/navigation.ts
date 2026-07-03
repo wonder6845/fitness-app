@@ -29,6 +29,7 @@ export type RootStackParamList = {
   FiveByFive: undefined;
   FiveByFiveSetup: { edit?: boolean } | undefined;
   FiveByFiveStats: undefined;
+  PlanEdit: { date?: string } | undefined;
 };
 
 declare global {

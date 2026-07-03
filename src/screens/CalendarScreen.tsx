@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +8,8 @@ import { Empty, ScreenHeader } from '../components/ui';
 import { RootStackParamList } from '../navigation';
 import { useApp } from '../store/AppContext';
 import { bodyPartColor, colors, radius, spacing } from '../theme';
-import { BodyPart, ExerciseRecord } from '../types';
+import { BodyPart, ExerciseRecord, PlannedWorkout } from '../types';
+import { appAlert } from '../utils/dialog';
 import {
   completedSetCount,
   dateKey,
@@ -20,9 +22,16 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, 'Tabs'>;
 
 export default function CalendarScreen({ navigation }: Props) {
-  const { sessions } = useApp();
+  const { sessions, plan, deletePlanned, getRoutine } = useApp();
   const insets = useSafeAreaInsets();
-  const [selected, setSelected] = useState(dateKey(Date.now()));
+  const today = dateKey(Date.now());
+  const [selected, setSelected] = useState(today);
+
+  // 계획 완료 판정: 같은 날짜에 같은 루틴 세션이 있으면 완료
+  const isPlanDone = (p: PlannedWorkout) =>
+    sessions.some(
+      (s) => dateKey(s.startedAt) === p.date && s.routineId === p.routineId
+    );
 
   const marked = useMemo(() => {
     const m: Record<string, { dots: { key: string; color: string }[] }> = {};
@@ -35,6 +44,17 @@ export default function CalendarScreen({ navigation }: Props) {
         }
       }
     }
+    // 계획된 날짜: 라임(예정) / 회색(놓침) 점
+    for (const p of plan) {
+      if (!m[p.date]) m[p.date] = { dots: [] };
+      if (!m[p.date].dots.some((d) => d.key === 'plan')) {
+        const missed = p.date < today && !isPlanDone(p);
+        m[p.date].dots.push({
+          key: 'plan',
+          color: missed ? colors.faint : colors.primary,
+        });
+      }
+    }
     const result: Record<string, unknown> = { ...m };
     result[selected] = {
       ...(m[selected] ?? {}),
@@ -42,7 +62,8 @@ export default function CalendarScreen({ navigation }: Props) {
       selectedColor: colors.primary,
     };
     return result;
-  }, [sessions, selected]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, plan, selected]);
 
   const daySessions = useMemo(
     () =>
@@ -51,6 +72,25 @@ export default function CalendarScreen({ navigation }: Props) {
         .sort((a, b) => a.startedAt - b.startedAt),
     [sessions, selected]
   );
+
+  const dayPlans = useMemo(
+    () => plan.filter((p) => p.date === selected),
+    [plan, selected]
+  );
+
+  function planStatus(p: PlannedWorkout): { label: string; color: string } {
+    if (isPlanDone(p)) return { label: '완료', color: colors.accent };
+    if (p.date === today) return { label: '오늘 예정', color: colors.primary };
+    if (p.date < today) return { label: '놓침', color: colors.warn };
+    return { label: '예정', color: colors.sub };
+  }
+
+  function confirmDeletePlan(p: PlannedWorkout) {
+    appAlert('계획 삭제', `${p.date.replace(/-/g, '.')} · ${p.routineName} 계획을 삭제할까요?`, [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: () => deletePlanned(p.id) },
+    ]);
+  }
 
   return (
     <ScrollView
@@ -80,8 +120,63 @@ export default function CalendarScreen({ navigation }: Props) {
       />
 
       <View style={styles.list}>
-        <Text style={styles.dateTitle}>{selected.replace(/-/g, '. ')}</Text>
-        {daySessions.length === 0 ? (
+        <View style={styles.dateRow}>
+          <Text style={styles.dateTitle}>{selected.replace(/-/g, '. ')}</Text>
+          <Pressable
+            style={styles.planBtn}
+            onPress={() =>
+              navigation.navigate(
+                'PlanEdit',
+                selected >= today ? { date: selected } : undefined
+              )
+            }
+          >
+            <Ionicons name="add" size={15} color={colors.onPrimary} />
+            <Text style={styles.planBtnText}>계획</Text>
+          </Pressable>
+        </View>
+
+        {/* 예정된 운동 계획 */}
+        {dayPlans.map((p) => {
+          const st = planStatus(p);
+          const routineExists = !!getRoutine(p.routineId);
+          const done = st.label === '완료';
+          return (
+            <View key={p.id} style={[styles.card, styles.planCard]}>
+              <View style={styles.cardHead}>
+                <View style={styles.planLabelRow}>
+                  <Ionicons name="calendar-outline" size={13} color={colors.sub} />
+                  <Text style={styles.time}>운동 계획</Text>
+                </View>
+                <View style={[styles.badge, { backgroundColor: st.color }]}>
+                  <Text style={styles.badgeText}>{st.label}</Text>
+                </View>
+              </View>
+              <Text style={styles.routine}>{p.routineName}</Text>
+              {!routineExists && (
+                <Text style={styles.planGone}>루틴이 삭제되어 시작할 수 없어요.</Text>
+              )}
+              <View style={styles.planActions}>
+                {!done && routineExists && (
+                  <Pressable
+                    style={styles.planStart}
+                    onPress={() =>
+                      navigation.navigate('Workout', { routineId: p.routineId })
+                    }
+                  >
+                    <Ionicons name="play" size={13} color={colors.onPrimary} />
+                    <Text style={styles.planStartText}>운동 시작</Text>
+                  </Pressable>
+                )}
+                <Pressable hitSlop={8} onPress={() => confirmDeletePlan(p)}>
+                  <Text style={styles.planDelete}>삭제</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
+
+        {daySessions.length === 0 && dayPlans.length === 0 ? (
           <Empty text="이 날의 운동 기록이 없어요." />
         ) : (
           daySessions.map((s) => (
@@ -136,12 +231,47 @@ function uniqueParts(records: ExerciseRecord[]): BodyPart[] {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   list: { padding: spacing.lg },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.md,
+  },
   dateTitle: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '800',
-    marginBottom: spacing.md,
   },
+  planBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  planBtnText: { color: colors.onPrimary, fontSize: 13, fontWeight: '800' },
+  planCard: { borderStyle: 'dashed', borderColor: colors.primary + '66' },
+  planLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  planGone: { color: colors.warn, fontSize: 12, marginTop: 4 },
+  planActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+  },
+  planStart: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  planStartText: { color: colors.onPrimary, fontSize: 13, fontWeight: '800' },
+  planDelete: { color: colors.danger, fontSize: 13, fontWeight: '600' },
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,

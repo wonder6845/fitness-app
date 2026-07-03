@@ -4,6 +4,7 @@ import {
   BodyEntry,
   DEFAULT_SETTINGS,
   Exercise,
+  PlannedWorkout,
   Routine,
   Settings,
   WorkoutDraft,
@@ -19,6 +20,7 @@ const KEYS = {
   seeded: 'fa.seeded.v1',
   body: 'fa.body.v1',
   fivexfive: 'fa.fivexfive.v1',
+  plan: 'fa.plan.v1',
 };
 
 async function getJSON<T>(key: string, fallback: T): Promise<T> {
@@ -60,6 +62,9 @@ export const db = {
 
   loadBody: () => getJSON<BodyEntry[]>(KEYS.body, []),
   saveBody: (b: BodyEntry[]) => setJSON(KEYS.body, b),
+
+  loadPlan: () => getJSON<PlannedWorkout[]>(KEYS.plan, []),
+  savePlan: (p: PlannedWorkout[]) => setJSON(KEYS.plan, p),
 
   loadFivexFive: () => getJSON<FiveByFiveProgram | null>(KEYS.fivexfive, null),
   saveFivexFive: (p: FiveByFiveProgram | null) =>

@@ -29,7 +29,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Tabs'>;
 const WEEK_GOAL = 4;
 
 export default function HomeScreen({ navigation }: Props) {
-  const { routines, sessions, draft, clearDraft, addSession } = useApp();
+  const { routines, sessions, draft, clearDraft, addSession, plan, getRoutine } =
+    useApp();
   const insets = useSafeAreaInsets();
 
   const now = Date.now();
@@ -48,6 +49,15 @@ export default function HomeScreen({ navigation }: Props) {
   const todayKey = dateKey(now);
   const todaySessions = sessions.filter((s) => dateKey(s.startedAt) === todayKey);
   const weekProgress = Math.min(weekCount / WEEK_GOAL, 1);
+
+  // 오늘 예정된 운동 계획 (아직 완료하지 않은 것)
+  const todayPlans = plan.filter(
+    (p) =>
+      p.date === todayKey &&
+      !sessions.some(
+        (s) => dateKey(s.startedAt) === p.date && s.routineId === p.routineId
+      )
+  );
 
   function handleSaveDraft() {
     if (!draft) return;
@@ -114,6 +124,40 @@ export default function HomeScreen({ navigation }: Props) {
             <Btn title="저장" small variant="secondary" onPress={handleSaveDraft} />
             <Btn title="삭제" small variant="ghost" onPress={clearDraft} />
           </View>
+        </Card>
+      )}
+
+      {/* 오늘의 계획 */}
+      {todayPlans.length > 0 && (
+        <Card style={styles.planCard}>
+          <View style={styles.draftHead}>
+            <View style={styles.planIcon}>
+              <Ionicons name="calendar" size={16} color={colors.onPrimary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.draftTitle}>오늘의 계획</Text>
+              <Text style={styles.draftSub}>
+                {todayPlans.length}개의 운동이 예정되어 있어요
+              </Text>
+            </View>
+          </View>
+          {todayPlans.map((p) => (
+            <View key={p.id} style={styles.planRow}>
+              <Text style={styles.planName}>{p.routineName}</Text>
+              {getRoutine(p.routineId) ? (
+                <Btn
+                  title="시작"
+                  icon="play"
+                  small
+                  onPress={() =>
+                    navigation.navigate('Workout', { routineId: p.routineId })
+                  }
+                />
+              ) : (
+                <Text style={styles.planGone}>루틴 삭제됨</Text>
+              )}
+            </View>
+          ))}
         </Card>
       )}
 
@@ -299,6 +343,20 @@ const styles = StyleSheet.create({
   draftTitle: { color: colors.text, fontSize: 15, fontWeight: '800' },
   draftSub: { color: colors.sub, fontSize: 13, marginTop: 1 },
   draftBtns: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+
+  planCard: { marginBottom: spacing.lg, borderColor: colors.accent, backgroundColor: '#101c19' },
+  planIcon: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accent,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  planName: { color: colors.text, fontSize: 15, fontWeight: '700', flex: 1 },
+  planGone: { color: colors.faint, fontSize: 12 },
 
   carousel: { marginHorizontal: -spacing.lg, marginBottom: spacing.xl },
 
