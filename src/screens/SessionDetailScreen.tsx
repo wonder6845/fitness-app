@@ -245,6 +245,11 @@ export default function SessionDetailScreen({ navigation, route }: Props) {
                     RPE {set.rpe}
                   </Text>
                 ) : null}
+                {set.avgHr ? (
+                  <Text style={{ color: '#FF7A7A', fontSize: 10, marginTop: 2, fontWeight: '700' }}>
+                    ♥ {set.avgHr}bpm
+                  </Text>
+                ) : null}
               </Pressable>
             </View>
           ))}

@@ -35,6 +35,7 @@ import {
   WorkoutDraft,
   WorkoutSession,
 } from '../types';
+import { getCardioStats, isHealthAvailable } from '../utils/health';
 import { playBeep, playRestEndChime } from '../utils/sound';
 import { detectPRs, prLabel } from '../utils/strength';
 import {
@@ -429,8 +430,21 @@ export default function WorkoutScreen({ navigation, route }: Props) {
     if (!cur || cur.type !== 'exercise') return;
     const rec = records[cur.exIndex];
     if (rec?.bodyPart === '유산소') {
-      const sec = Math.max(1, Math.round(curElapsed() / 1000));
+      const elapsed = curElapsed();
+      const sec = Math.max(1, Math.round(elapsed / 1000));
       markSet(cur.exIndex, cur.setNo, { durationSec: sec });
+      // Apple Watch(HealthKit) 있으면 이 세트 구간의 평균 심박·거리 자동 채움
+      if (isHealthAvailable()) {
+        const end = Date.now();
+        getCardioStats(end - elapsed, end).then(({ avgHr, distanceKm }) => {
+          const patch: Partial<SetRecord> = {};
+          if (avgHr) patch.avgHr = avgHr;
+          if (distanceKm) patch.distanceKm = distanceKm;
+          if (Object.keys(patch).length > 0) {
+            markSet(cur.exIndex, cur.setNo, patch);
+          }
+        });
+      }
     }
     setCompleteSet({ exIndex: cur.exIndex, setNo: cur.setNo });
   }
@@ -1029,8 +1043,29 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                           />
                           <Text style={styles.cardioUnit}>km (선택)</Text>
                         </View>
+                        {(isHealthAvailable() || set.avgHr) && (
+                          <View style={styles.cardioRow}>
+                            <Text style={styles.cardioLabel}>심박</Text>
+                            <TextInput
+                              style={styles.cardioInput}
+                              keyboardType="number-pad"
+                              value={set.avgHr ? String(set.avgHr) : ''}
+                              placeholder="-"
+                              placeholderTextColor={colors.faint}
+                              onChangeText={(t) => {
+                                const v = Math.round(parseNum(t));
+                                markSet(completeSet.exIndex, completeSet.setNo, {
+                                  avgHr: v > 0 ? v : undefined,
+                                });
+                              }}
+                            />
+                            <Text style={styles.cardioUnit}>bpm ⌚ Apple Watch</Text>
+                          </View>
+                        )}
                         <Text style={styles.cardioAuto}>
-                          ⏱ 운동한 시간이 자동으로 채워졌어요
+                          {isHealthAvailable()
+                            ? '⏱ 시간 자동 기록 · ⌚ 워치에서 심박·거리를 불러왔어요'
+                            : '⏱ 운동한 시간이 자동으로 채워졌어요'}
                         </Text>
                       </View>
                     ) : (

@@ -31,6 +31,8 @@ export default function StatsScreen() {
     let sec = 0;
     let km = 0;
     let count = 0;
+    let hrSum = 0;
+    let hrN = 0;
     for (const s of sessions) {
       if (s.startedAt < cutoff) continue;
       for (const r of s.records) {
@@ -41,11 +43,20 @@ export default function StatsScreen() {
           any = true;
           sec += set.durationSec ?? 0;
           km += set.distanceKm ?? 0;
+          if (set.avgHr) {
+            hrSum += set.avgHr;
+            hrN++;
+          }
         }
         if (any) count++;
       }
     }
-    return { sec, km: Math.round(km * 10) / 10, count };
+    return {
+      sec,
+      km: Math.round(km * 10) / 10,
+      count,
+      avgHr: hrN > 0 ? Math.round(hrSum / hrN) : null,
+    };
   }, [sessions]);
 
   // 운동별 진행 그래프용: 데이터가 있는 운동 목록
@@ -185,6 +196,12 @@ export default function StatsScreen() {
               <Stat value={fmtDuration(cardio.sec)} label="총 시간" />
               <View style={styles.vline} />
               <Stat value={cardio.km > 0 ? `${cardio.km}km` : '-'} label="총 거리" />
+              {cardio.avgHr ? (
+                <>
+                  <View style={styles.vline} />
+                  <Stat value={`♥${cardio.avgHr}`} label="평균 심박" />
+                </>
+              ) : null}
             </View>
           </Card>
         </>
