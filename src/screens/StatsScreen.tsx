@@ -25,6 +25,29 @@ export default function StatsScreen() {
 
   const stats = useMemo(() => computeStats(sessions), [sessions]);
 
+  // 유산소 요약 (최근 30일, 완료 세트 기준)
+  const cardio = useMemo(() => {
+    const cutoff = Date.now() - 30 * 86400000;
+    let sec = 0;
+    let km = 0;
+    let count = 0;
+    for (const s of sessions) {
+      if (s.startedAt < cutoff) continue;
+      for (const r of s.records) {
+        if (r.bodyPart !== '유산소') continue;
+        let any = false;
+        for (const set of r.sets) {
+          if (!set.completed) continue;
+          any = true;
+          sec += set.durationSec ?? 0;
+          km += set.distanceKm ?? 0;
+        }
+        if (any) count++;
+      }
+    }
+    return { sec, km: Math.round(km * 10) / 10, count };
+  }, [sessions]);
+
   // 운동별 진행 그래프용: 데이터가 있는 운동 목록
   const exerciseList = useMemo(() => {
     const seen = new Map<string, string>();
@@ -150,6 +173,22 @@ export default function StatsScreen() {
           ))
         )}
       </Card>
+
+      {/* 유산소 요약 */}
+      {cardio.count > 0 && (
+        <>
+          <SectionTitle>유산소 (최근 30일)</SectionTitle>
+          <Card style={{ marginBottom: spacing.xl }}>
+            <View style={styles.row}>
+              <Stat value={`${cardio.count}회`} label="유산소 운동" />
+              <View style={styles.vline} />
+              <Stat value={fmtDuration(cardio.sec)} label="총 시간" />
+              <View style={styles.vline} />
+              <Stat value={cardio.km > 0 ? `${cardio.km}km` : '-'} label="총 거리" />
+            </View>
+          </Card>
+        </>
+      )}
 
       {/* 운동별 진행 그래프 */}
       {exerciseList.length > 0 && (

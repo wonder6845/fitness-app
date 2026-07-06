@@ -131,6 +131,23 @@ export const PROGRAMS: WorkoutProgram[] = [
     ],
   },
   {
+    id: 'prog-interval-cardio',
+    name: '인터벌 유산소 20분',
+    subtitle: '전력 1분 + 회복 1분 × 8',
+    emoji: '🏃',
+    level: '전체',
+    frequency: '주 2~3회',
+    description:
+      '짧고 굵은 HIIT식 유산소입니다. 워밍업으로 몸을 데운 뒤, 전력 1분 → 회복(휴식) 1분을 8번 반복하고 쿨다운으로 마무리합니다.\n\n' +
+      '러닝머신·사이클·로잉 어디에 적용해도 좋아요. 전력 구간은 "대화가 불가능한 정도", 회복 구간은 완전히 천천히. 유산소 운동은 세트 완료 시 수행 시간이 자동 기록되고 거리를 함께 남길 수 있습니다.',
+    gradient: ['#f83600', '#f9d423'],
+    exercises: [
+      { name: '걷기', bodyPart: '유산소', equipment: '맨몸', totalSets: 1, exerciseSec: 300, restSec: 30, targetLabel: '워밍업 5분' },
+      { name: '러닝머신', bodyPart: '유산소', equipment: '머신', totalSets: 8, exerciseSec: 60, restSec: 60, targetLabel: '전력 1분 × 8 (회복 1분)' },
+      { name: '걷기', bodyPart: '유산소', equipment: '맨몸', totalSets: 1, exerciseSec: 300, restSec: 0, targetLabel: '쿨다운 5분' },
+    ],
+  },
+  {
     id: 'prog-ppl-push',
     name: '푸시 데이',
     subtitle: 'PPL · 가슴·어깨·삼두',

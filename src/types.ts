@@ -60,6 +60,8 @@ export interface SetRecord {
   type?: SetType; // 워밍업/드롭 (없으면 일반 세트)
   rpe?: number; // 주관적 운동강도 0~10 (선택)
   failReason?: string; // 목표 미달 시 실패 원인(선택)
+  durationSec?: number; // 유산소: 수행 시간(초) — 완료 시 스톱워치 경과로 자동 채움
+  distanceKm?: number; // 유산소: 거리(km, 선택)
 }
 
 /** 한 운동에 대한 기록 (세트 묶음 + 메모) */

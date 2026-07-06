@@ -423,10 +423,15 @@ export default function WorkoutScreen({ navigation, route }: Props) {
     buzz('light');
   }
 
-  // 현재 운동 세트를 "완료"하려 할 때 → 횟수 기록 모달 열기
+  // 현재 운동 세트를 "완료"하려 할 때 → 기록 모달 열기 (유산소는 경과 시간 자동 채움)
   function requestCompleteSet() {
     const cur = stepsRef.current[stepIndexRef.current];
     if (!cur || cur.type !== 'exercise') return;
+    const rec = records[cur.exIndex];
+    if (rec?.bodyPart === '유산소') {
+      const sec = Math.max(1, Math.round(curElapsed() / 1000));
+      markSet(cur.exIndex, cur.setNo, { durationSec: sec });
+    }
     setCompleteSet({ exIndex: cur.exIndex, setNo: cur.setNo });
   }
 
@@ -719,17 +724,25 @@ export default function WorkoutScreen({ navigation, route }: Props) {
           {/* 현재 운동 세트 입력 */}
           {curEx && curStep && (
             <View style={styles.setTable}>
-              <Pressable onPress={() => setPlateOpen(true)} style={styles.plateBtn}>
-                <Ionicons name="barbell-outline" size={15} color={colors.primary} />
-                <Text style={styles.plateBtnText}>원판 계산기</Text>
-              </Pressable>
-              <Text style={styles.setHint}>
-                세트 번호를 눌러 워밍업(W)·드롭(D) 지정
-              </Text>
+              {curEx.bodyPart !== '유산소' && (
+                <Pressable onPress={() => setPlateOpen(true)} style={styles.plateBtn}>
+                  <Ionicons name="barbell-outline" size={15} color={colors.primary} />
+                  <Text style={styles.plateBtnText}>원판 계산기</Text>
+                </Pressable>
+              )}
+              {curEx.bodyPart !== '유산소' && (
+                <Text style={styles.setHint}>
+                  세트 번호를 눌러 워밍업(W)·드롭(D) 지정
+                </Text>
+              )}
               <View style={styles.setHeaderRow}>
                 <Text style={[styles.th, { width: 44 }]}>세트</Text>
-                <Text style={[styles.th, { flex: 1 }]}>무게({meta.unit})</Text>
-                <Text style={[styles.th, { flex: 1 }]}>횟수</Text>
+                <Text style={[styles.th, { flex: 1 }]}>
+                  {curEx.bodyPart === '유산소' ? '시간(분)' : `무게(${meta.unit})`}
+                </Text>
+                <Text style={[styles.th, { flex: 1 }]}>
+                  {curEx.bodyPart === '유산소' ? '거리(km)' : '횟수'}
+                </Text>
                 {settings.showRPE && (
                   <Text style={[styles.th, { width: 44 }]}>RPE</Text>
                 )}
@@ -770,32 +783,72 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                         {set.skipped ? '⤬' : ''}
                       </Text>
                     </Pressable>
-                    <View style={{ flex: 1, paddingHorizontal: 4 }}>
-                      <TextInput
-                        style={styles.input}
-                        keyboardType="decimal-pad"
-                        value={set.weight ? String(set.weight) : ''}
-                        placeholder={placeholderFor(prevSets, set.setNo, 'weight')}
-                        placeholderTextColor={colors.faint}
-                        onChangeText={(t) =>
-                          markSet(curStep.exIndex, set.setNo, { weight: parseNum(t) })
-                        }
-                      />
-                    </View>
-                    <View style={{ flex: 1, paddingHorizontal: 4 }}>
-                      <TextInput
-                        style={styles.input}
-                        keyboardType="number-pad"
-                        value={set.reps ? String(set.reps) : ''}
-                        placeholder={placeholderFor(prevSets, set.setNo, 'reps')}
-                        placeholderTextColor={colors.faint}
-                        onChangeText={(t) =>
-                          markSet(curStep.exIndex, set.setNo, {
-                            reps: Math.round(parseNum(t)),
-                          })
-                        }
-                      />
-                    </View>
+                    {curEx.bodyPart === '유산소' ? (
+                      <>
+                        <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                          <TextInput
+                            style={styles.input}
+                            keyboardType="decimal-pad"
+                            value={
+                              set.durationSec
+                                ? String(Math.round((set.durationSec / 60) * 10) / 10)
+                                : ''
+                            }
+                            placeholder="0"
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) =>
+                              markSet(curStep.exIndex, set.setNo, {
+                                durationSec: Math.max(0, Math.round(parseNum(t) * 60)),
+                              })
+                            }
+                          />
+                        </View>
+                        <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                          <TextInput
+                            style={styles.input}
+                            keyboardType="decimal-pad"
+                            value={set.distanceKm ? String(set.distanceKm) : ''}
+                            placeholder="-"
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) => {
+                              const v = parseNum(t);
+                              markSet(curStep.exIndex, set.setNo, {
+                                distanceKm: v > 0 ? v : undefined,
+                              });
+                            }}
+                          />
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                          <TextInput
+                            style={styles.input}
+                            keyboardType="decimal-pad"
+                            value={set.weight ? String(set.weight) : ''}
+                            placeholder={placeholderFor(prevSets, set.setNo, 'weight')}
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) =>
+                              markSet(curStep.exIndex, set.setNo, { weight: parseNum(t) })
+                            }
+                          />
+                        </View>
+                        <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                          <TextInput
+                            style={styles.input}
+                            keyboardType="number-pad"
+                            value={set.reps ? String(set.reps) : ''}
+                            placeholder={placeholderFor(prevSets, set.setNo, 'reps')}
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) =>
+                              markSet(curStep.exIndex, set.setNo, {
+                                reps: Math.round(parseNum(t)),
+                              })
+                            }
+                          />
+                        </View>
+                      </>
+                    )}
                     {settings.showRPE && (
                       <View style={{ width: 44, paddingHorizontal: 2 }}>
                         <TextInput
@@ -915,7 +968,72 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                   >
                     <Text style={styles.recExName}>{rec.exerciseName}</Text>
                     <Text style={styles.recSetNo}>{completeSet.setNo}세트 완료</Text>
-                    <Text style={styles.recLabel}>몇 회 하셨나요?</Text>
+                    <Text style={styles.recLabel}>
+                      {rec.bodyPart === '유산소' ? '얼마나 하셨나요?' : '몇 회 하셨나요?'}
+                    </Text>
+                    {rec.bodyPart === '유산소' ? (
+                      <View style={styles.cardioBox}>
+                        <View style={styles.cardioRow}>
+                          <Text style={styles.cardioLabel}>시간</Text>
+                          <TextInput
+                            style={styles.cardioInput}
+                            keyboardType="number-pad"
+                            value={
+                              set.durationSec
+                                ? String(Math.floor(set.durationSec / 60))
+                                : ''
+                            }
+                            placeholder="0"
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) =>
+                              markSet(completeSet.exIndex, completeSet.setNo, {
+                                durationSec:
+                                  Math.max(0, Math.round(parseNum(t))) * 60 +
+                                  ((set.durationSec ?? 0) % 60),
+                              })
+                            }
+                          />
+                          <Text style={styles.cardioUnit}>분</Text>
+                          <TextInput
+                            style={styles.cardioInput}
+                            keyboardType="number-pad"
+                            value={
+                              set.durationSec ? String(set.durationSec % 60) : ''
+                            }
+                            placeholder="0"
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) =>
+                              markSet(completeSet.exIndex, completeSet.setNo, {
+                                durationSec:
+                                  Math.floor((set.durationSec ?? 0) / 60) * 60 +
+                                  Math.min(59, Math.max(0, Math.round(parseNum(t)))),
+                              })
+                            }
+                          />
+                          <Text style={styles.cardioUnit}>초</Text>
+                        </View>
+                        <View style={styles.cardioRow}>
+                          <Text style={styles.cardioLabel}>거리</Text>
+                          <TextInput
+                            style={[styles.cardioInput, { minWidth: 90 }]}
+                            keyboardType="decimal-pad"
+                            value={set.distanceKm ? String(set.distanceKm) : ''}
+                            placeholder="0"
+                            placeholderTextColor={colors.faint}
+                            onChangeText={(t) => {
+                              const v = parseNum(t);
+                              markSet(completeSet.exIndex, completeSet.setNo, {
+                                distanceKm: v > 0 ? v : undefined,
+                              });
+                            }}
+                          />
+                          <Text style={styles.cardioUnit}>km (선택)</Text>
+                        </View>
+                        <Text style={styles.cardioAuto}>
+                          ⏱ 운동한 시간이 자동으로 채워졌어요
+                        </Text>
+                      </View>
+                    ) : (
                     <View style={styles.recRepsRow}>
                       <Pressable
                         style={styles.recStep}
@@ -950,6 +1068,7 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                         <Text style={styles.recStepText}>+</Text>
                       </Pressable>
                     </View>
+                    )}
 
                     {/* 목표 미달 시 실패 원인 (선택) */}
                     {(() => {
@@ -980,15 +1099,17 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                       );
                     })()}
 
-                    {/* 원판으로 무게 입력 */}
-                    <PlateWeightInput
-                      weight={set.weight}
-                      unit={meta.unit}
-                      equipment={rec.equipment}
-                      onChange={(w) =>
-                        markSet(completeSet.exIndex, completeSet.setNo, { weight: w })
-                      }
-                    />
+                    {/* 원판으로 무게 입력 (유산소 제외) */}
+                    {rec.bodyPart !== '유산소' && (
+                      <PlateWeightInput
+                        weight={set.weight}
+                        unit={meta.unit}
+                        equipment={rec.equipment}
+                        onChange={(w) =>
+                          markSet(completeSet.exIndex, completeSet.setNo, { weight: w })
+                        }
+                      />
+                    )}
 
                     <Btn
                       title="완료하고 다음으로 →"
@@ -1123,8 +1244,12 @@ function describeNext(
 
 function formatPrev(sets: SetRecord[], unit: Unit): string {
   return sets
-    .filter((s) => s.weight > 0 || s.reps > 0)
-    .map((s) => `${s.weight}${unit}×${s.reps}`)
+    .filter((s) => s.weight > 0 || s.reps > 0 || (s.durationSec ?? 0) > 0)
+    .map((s) =>
+      (s.durationSec ?? 0) > 0
+        ? `${Math.round((s.durationSec ?? 0) / 60)}분${s.distanceKm ? ` ${s.distanceKm}km` : ''}`
+        : `${s.weight}${unit}×${s.reps}`
+    )
     .join(', ');
 }
 
@@ -1359,6 +1484,29 @@ const styles = StyleSheet.create({
   recExName: { color: colors.text, fontSize: 18, fontWeight: '800', textAlign: 'center' },
   recSetNo: { color: colors.accent, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 2 },
   recLabel: { color: colors.sub, fontSize: 13, fontWeight: '600' },
+  cardioBox: { marginTop: spacing.sm, marginBottom: spacing.lg },
+  cardioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  cardioLabel: { color: colors.sub, fontSize: 13, fontWeight: '700', width: 36 },
+  cardioInput: {
+    backgroundColor: colors.inputBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+    fontSize: 20,
+    fontWeight: '800',
+    textAlign: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    minWidth: 64,
+  },
+  cardioUnit: { color: colors.sub, fontSize: 13, fontWeight: '600' },
+  cardioAuto: { color: colors.faint, fontSize: 12, marginTop: 2 },
   failBox: {
     backgroundColor: 'rgba(255,176,32,0.08)',
     borderWidth: 1,

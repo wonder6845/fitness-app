@@ -135,8 +135,12 @@ export default function SessionDetailScreen({ navigation, route }: Props) {
 
           <View style={styles.headerRow}>
             <Text style={[styles.th, { width: 40 }]}>세트</Text>
-            <Text style={[styles.th, { flex: 1 }]}>무게({session.unit})</Text>
-            <Text style={[styles.th, { flex: 1 }]}>횟수</Text>
+            <Text style={[styles.th, { flex: 1 }]}>
+              {rec.bodyPart === '유산소' ? '시간(분)' : `무게(${session.unit})`}
+            </Text>
+            <Text style={[styles.th, { flex: 1 }]}>
+              {rec.bodyPart === '유산소' ? '거리(km)' : '횟수'}
+            </Text>
             <Text style={[styles.th, { width: 50 }]}>상태</Text>
           </View>
           {rec.sets.map((set) => (
@@ -150,30 +154,70 @@ export default function SessionDetailScreen({ navigation, route }: Props) {
               >
                 {set.type === 'warmup' ? 'W' : set.type === 'drop' ? 'D' : set.setNo}
               </Text>
-              <View style={{ flex: 1, paddingHorizontal: 4 }}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="decimal-pad"
-                  value={set.weight ? String(set.weight) : ''}
-                  placeholder="0"
-                  placeholderTextColor={colors.faint}
-                  onChangeText={(t) =>
-                    patchSet(exIndex, set.setNo, { weight: parseNum(t) })
-                  }
-                />
-              </View>
-              <View style={{ flex: 1, paddingHorizontal: 4 }}>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="number-pad"
-                  value={set.reps ? String(set.reps) : ''}
-                  placeholder="0"
-                  placeholderTextColor={colors.faint}
-                  onChangeText={(t) =>
-                    patchSet(exIndex, set.setNo, { reps: Math.round(parseNum(t)) })
-                  }
-                />
-              </View>
+              {rec.bodyPart === '유산소' ? (
+                <>
+                  <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                      value={
+                        set.durationSec
+                          ? String(Math.round((set.durationSec / 60) * 10) / 10)
+                          : ''
+                      }
+                      placeholder="0"
+                      placeholderTextColor={colors.faint}
+                      onChangeText={(t) =>
+                        patchSet(exIndex, set.setNo, {
+                          durationSec: Math.max(0, Math.round(parseNum(t) * 60)),
+                        })
+                      }
+                    />
+                  </View>
+                  <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                      value={set.distanceKm ? String(set.distanceKm) : ''}
+                      placeholder="-"
+                      placeholderTextColor={colors.faint}
+                      onChangeText={(t) => {
+                        const v = parseNum(t);
+                        patchSet(exIndex, set.setNo, {
+                          distanceKm: v > 0 ? v : undefined,
+                        });
+                      }}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                      value={set.weight ? String(set.weight) : ''}
+                      placeholder="0"
+                      placeholderTextColor={colors.faint}
+                      onChangeText={(t) =>
+                        patchSet(exIndex, set.setNo, { weight: parseNum(t) })
+                      }
+                    />
+                  </View>
+                  <View style={{ flex: 1, paddingHorizontal: 4 }}>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="number-pad"
+                      value={set.reps ? String(set.reps) : ''}
+                      placeholder="0"
+                      placeholderTextColor={colors.faint}
+                      onChangeText={(t) =>
+                        patchSet(exIndex, set.setNo, { reps: Math.round(parseNum(t)) })
+                      }
+                    />
+                  </View>
+                </>
+              )}
               <Pressable
                 style={{ width: 50, alignItems: 'center' }}
                 onPress={() =>
