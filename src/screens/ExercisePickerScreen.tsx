@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -33,6 +34,17 @@ export default function ExercisePickerScreen({ navigation }: Props) {
   const [customName, setCustomName] = useState('');
   const [customPart, setCustomPart] = useState<BodyPart>('가슴');
   const [customEquip, setCustomEquip] = useState<Equipment>('바벨');
+  // 브랜드: null=없음, DIRECT_BRAND=직접 입력, 그 외=선택된 브랜드명
+  const DIRECT_BRAND = '직접 입력';
+  const [customBrand, setCustomBrand] = useState<string | null>(null);
+  const [customBrandText, setCustomBrandText] = useState('');
+
+  // 필터/폼에 보여줄 브랜드 목록: 기본 브랜드 + 커스텀 운동에 쓰인 브랜드
+  const brandOptions = useMemo(() => {
+    const set = new Set(EQUIPMENT_BRANDS);
+    for (const e of allExercises) if (e.brand) set.add(e.brand);
+    return Array.from(set);
+  }, [allExercises]);
 
   const filtered = useMemo(() => {
     const q = normalizeName(search);
@@ -62,10 +74,22 @@ export default function ExercisePickerScreen({ navigation }: Props) {
   }
 
   function handleCreateCustom() {
+    // 브랜드 결정: 직접 입력이면 입력값, 아니면 선택된 브랜드 (없음이면 undefined)
+    const brand =
+      customBrand === DIRECT_BRAND
+        ? customBrandText.trim() || undefined
+        : customBrand ?? undefined;
+    const rawName = customName.trim();
+    // 브랜드 머신과 동일하게 이름 앞에 브랜드를 붙여 루틴/기록 어디서든 보이게 함
+    const name =
+      brand && !normalizeName(rawName).includes(normalizeName(brand))
+        ? `${brand} ${rawName}`
+        : rawName;
     const res = addCustomExercise({
-      name: customName.trim(),
+      name,
       bodyPart: customPart,
       equipment: customEquip,
+      brand,
     });
     if (!res.ok) {
       appAlert('추가할 수 없어요', res.reason);
@@ -74,6 +98,8 @@ export default function ExercisePickerScreen({ navigation }: Props) {
     // 만든 운동을 자동 선택
     setSelected((prev) => [...prev, res.exercise.id]);
     setCustomName('');
+    setCustomBrand(null);
+    setCustomBrandText('');
     setShowForm(false);
   }
 
@@ -126,7 +152,7 @@ export default function ExercisePickerScreen({ navigation }: Props) {
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={['전체브랜드', ...EQUIPMENT_BRANDS]}
+          data={['전체브랜드', ...brandOptions]}
           keyExtractor={(p) => p}
           contentContainerStyle={{ paddingBottom: spacing.sm }}
           renderItem={({ item }) => (
@@ -173,6 +199,11 @@ export default function ExercisePickerScreen({ navigation }: Props) {
       {showForm && (
         <View style={styles.formOverlay}>
           <View style={styles.form}>
+            <ScrollView
+              style={{ maxHeight: 460 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <Label>새 운동 이름</Label>
             <TextInput
               value={customName}
@@ -204,6 +235,38 @@ export default function ExercisePickerScreen({ navigation }: Props) {
                 />
               ))}
             </View>
+            <Label style={{ marginTop: spacing.sm }}>브랜드 (선택)</Label>
+            <View style={styles.wrapRow}>
+              <Pill
+                label="없음"
+                selected={customBrand === null}
+                onPress={() => setCustomBrand(null)}
+              />
+              {brandOptions.map((b) => (
+                <Pill
+                  key={b}
+                  label={b}
+                  color="#C08BFF"
+                  selected={customBrand === b}
+                  onPress={() => setCustomBrand(b)}
+                />
+              ))}
+              <Pill
+                label={DIRECT_BRAND}
+                color={colors.accent}
+                selected={customBrand === DIRECT_BRAND}
+                onPress={() => setCustomBrand(DIRECT_BRAND)}
+              />
+            </View>
+            {customBrand === DIRECT_BRAND && (
+              <TextInput
+                value={customBrandText}
+                onChangeText={setCustomBrandText}
+                placeholder="브랜드명 입력 (예: 프리모션)"
+                placeholderTextColor={colors.faint}
+                style={[styles.search, { marginTop: spacing.sm }]}
+              />
+            )}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: spacing.md }}>
               <Btn
                 title="취소"
@@ -219,6 +282,7 @@ export default function ExercisePickerScreen({ navigation }: Props) {
                 style={{ flex: 2 }}
               />
             </View>
+            </ScrollView>
           </View>
         </View>
       )}
