@@ -161,6 +161,20 @@ export default function HomeScreen({ navigation }: Props) {
         </Card>
       )}
 
+      {/* 자유 유산소 (러닝 모드) */}
+      <Pressable
+        onPress={() => navigation.navigate('CardioRun')}
+        style={({ pressed }) => [styles.runCard, pressed && { opacity: 0.9 }]}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.runTitle}>🏃 러닝 시작</Text>
+          <Text style={styles.runSub}>거리 · 페이스 · 심박 실시간 측정</Text>
+        </View>
+        <View style={styles.runGo}>
+          <Ionicons name="play" size={22} color={colors.onPrimary} />
+        </View>
+      </Pressable>
+
       {/* 운동 프로그램 */}
       <SectionHeader
         title="운동 프로그램"
@@ -345,6 +359,26 @@ const styles = StyleSheet.create({
   draftBtns: { flexDirection: 'row', gap: 8, alignItems: 'center' },
 
   planCard: { marginBottom: spacing.lg, borderColor: colors.accent, backgroundColor: '#101c19' },
+  runCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16210f',
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  runTitle: { color: colors.text, fontSize: 17, fontWeight: '900' },
+  runSub: { color: colors.sub, fontSize: 12, marginTop: 3 },
+  runGo: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   planIcon: {
     width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accent,
     alignItems: 'center', justifyContent: 'center',

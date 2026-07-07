@@ -17,6 +17,7 @@ import { Loading } from './src/components/ui';
 import { RootStackParamList, TabParamList } from './src/navigation';
 import BodyScreen from './src/screens/BodyScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
+import CardioRunScreen from './src/screens/CardioRunScreen';
 import FiveByFiveScreen from './src/screens/FiveByFiveScreen';
 import FiveByFiveSetupScreen from './src/screens/FiveByFiveSetupScreen';
 import FiveByFiveStatsScreen from './src/screens/FiveByFiveStatsScreen';
@@ -206,6 +207,11 @@ function Root() {
           name="FiveByFiveStats"
           component={FiveByFiveStatsScreen}
           options={{ title: '5×5 통계' }}
+        />
+        <Stack.Screen
+          name="CardioRun"
+          component={CardioRunScreen}
+          options={{ headerShown: false, gestureEnabled: false }}
         />
         <Stack.Screen
           name="PlanEdit"
