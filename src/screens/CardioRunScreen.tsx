@@ -51,6 +51,7 @@ export default function CardioRunScreen({ navigation }: Props) {
   const [hr, setHr] = useState<number | null>(null);
   const [gpsOn, setGpsOn] = useState<boolean | null>(null); // null=미시도
   const [saved, setSaved] = useState(false);
+  const [splits, setSplits] = useState<number[]>([]); // km 구간 스플릿(각 1km 소요 초)
 
   // 경과 시간 엔진 (일시정지 지원)
   const baseRef = useRef(0);
@@ -60,6 +61,9 @@ export default function CardioRunScreen({ navigation }: Props) {
   const distanceRef = useRef(0);
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const lastPointRef = useRef<Location.LocationObject | null>(null);
+  const splitsRef = useRef<number[]>([]);
+  const lastDistElapsedRef = useRef(0); // 마지막 거리 갱신 시점의 경과(ms)
+  const lastSplitElapsedRef = useRef(0); // 마지막 km 완주 시점의 경과(ms)
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -71,6 +75,32 @@ export default function CardioRunScreen({ navigation }: Props) {
   const elapsed = () =>
     baseRef.current +
     (phaseRef.current === 'running' ? Date.now() - segStartRef.current : 0);
+
+  // 거리 갱신 + km 경계를 넘으면 구간 스플릿 기록 (경계 시각은 선형 보간)
+  function updateDistance(next: number) {
+    const prev = distanceRef.current;
+    const nowMs = elapsed();
+    if (next > prev) {
+      const prevMs = lastDistElapsedRef.current;
+      let boundary = splitsRef.current.length + 1;
+      while (boundary <= next + 1e-9) {
+        if (boundary > prev) {
+          const frac = Math.max(0, Math.min(1, (boundary - prev) / (next - prev)));
+          const tAt = prevMs + frac * (nowMs - prevMs);
+          splitsRef.current = [
+            ...splitsRef.current,
+            Math.max(1, Math.round((tAt - lastSplitElapsedRef.current) / 1000)),
+          ];
+          lastSplitElapsedRef.current = tAt;
+        }
+        boundary++;
+      }
+      setSplits(splitsRef.current);
+    }
+    lastDistElapsedRef.current = nowMs;
+    distanceRef.current = next;
+    setDistanceKm(next);
+  }
 
   // 타이머 틱
   useEffect(() => {
@@ -121,7 +151,7 @@ export default function CardioRunScreen({ navigation }: Props) {
           const d = haversineKm(prev.coords, loc.coords);
           if (d > 0 && d < 0.2) {
             // 순간이동(신호 튐) 방지
-            setDistanceKm((x) => Math.round((x + d) * 1000) / 1000);
+            updateDistance(Math.round((distanceRef.current + d) * 1000) / 1000);
           }
         }
       );
@@ -142,6 +172,12 @@ export default function CardioRunScreen({ navigation }: Props) {
     baseRef.current = 0;
     segStartRef.current = Date.now();
     setDisplayMs(0);
+    setDistanceKm(0);
+    distanceRef.current = 0;
+    setSplits([]);
+    splitsRef.current = [];
+    lastDistElapsedRef.current = 0;
+    lastSplitElapsedRef.current = 0;
     setPhase('running');
     activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
     startGps();
@@ -221,6 +257,7 @@ export default function CardioRunScreen({ navigation }: Props) {
               durationSec,
               distanceKm: distanceKm > 0 ? Math.round(distanceKm * 100) / 100 : undefined,
               avgHr: hr ?? undefined,
+              splitsSec: splitsRef.current.length > 0 ? splitsRef.current : undefined,
             },
           ],
           memo: '',
@@ -322,19 +359,43 @@ export default function CardioRunScreen({ navigation }: Props) {
                 <Pressable
                   style={styles.manualBtn}
                   onPress={() =>
-                    setDistanceKm((x) => Math.max(0, Math.round((x - 0.1) * 100) / 100))
+                    updateDistance(
+                      Math.max(0, Math.round((distanceRef.current - 0.1) * 100) / 100)
+                    )
                   }
                 >
                   <Text style={styles.manualBtnText}>−0.1</Text>
                 </Pressable>
                 <Pressable
                   style={styles.manualBtn}
-                  onPress={() => setDistanceKm((x) => Math.round((x + 0.1) * 100) / 100)}
+                  onPress={() =>
+                    updateDistance(Math.round((distanceRef.current + 0.1) * 100) / 100)
+                  }
                 >
                   <Text style={styles.manualBtnText}>+0.1</Text>
                 </Pressable>
                 <Text style={styles.manualUnit}>km</Text>
               </View>
+            </View>
+          )}
+
+          {/* km 구간 스플릿 (최근 3개) */}
+          {splits.length > 0 && (
+            <View style={styles.splitBox}>
+              {splits.slice(-3).map((s, i) => {
+                const km = splits.length - Math.min(3, splits.length) + i + 1;
+                const isLatest = km === splits.length;
+                return (
+                  <View key={km} style={styles.splitRow}>
+                    <Text style={styles.splitKm}>{km} km</Text>
+                    <Text
+                      style={[styles.splitTime, isLatest && { color: colors.primary }]}
+                    >
+                      {fmtSplit(s)}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           )}
 
@@ -372,6 +433,29 @@ export default function CardioRunScreen({ navigation }: Props) {
             {hr ? <Row label="평균 심박 ♥" value={`${hr} bpm`} hot /> : null}
             <Row label="칼로리 (추정)" value={`${kcal} kcal`} />
           </View>
+
+          {/* km 구간 스플릿 */}
+          {splits.length > 0 && (
+            <View style={styles.summaryCard}>
+              <Text style={styles.splitTitle}>km 구간 스플릿</Text>
+              {(() => {
+                const fastest = Math.min(...splits);
+                return splits.map((s, i) => (
+                  <View key={i} style={styles.splitRow}>
+                    <Text style={styles.splitKm}>{i + 1} km</Text>
+                    <View style={styles.splitBarTrack}>
+                      <View style={[styles.splitBarFill, { flex: fastest / s }]} />
+                      <View style={{ flex: Math.max(0.001, 1 - fastest / s) }} />
+                    </View>
+                    <Text style={styles.splitTime}>
+                      {fmtSplit(s)}
+                      {s === fastest ? ' ⚡' : ''}
+                    </Text>
+                  </View>
+                ));
+              })()}
+            </View>
+          )}
 
           {/* 거리 보정 (실내/GPS 오차) */}
           <View style={styles.fixRow}>
@@ -424,6 +508,10 @@ function Row({ label, value, hot }: { label: string; value: string; hot?: boolea
       <Text style={[styles.sumValue, hot && { color: '#FF7A7A' }]}>{value}</Text>
     </View>
   );
+}
+
+function fmtSplit(sec: number): string {
+  return `${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, '0')}"`;
 }
 
 function haversineKm(
@@ -555,6 +643,22 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     marginTop: -30,
   },
+
+  // splits
+  splitBox: { alignSelf: 'stretch', paddingHorizontal: spacing.xl, marginTop: spacing.lg },
+  splitRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, gap: 10 },
+  splitKm: { color: colors.sub, fontSize: 13, fontWeight: '700', width: 46 },
+  splitTime: { color: colors.text, fontSize: 14, fontWeight: '800', minWidth: 70, textAlign: 'right' },
+  splitTitle: { color: colors.sub, fontSize: 12, fontWeight: '800', marginBottom: 6 },
+  splitBarTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.inputBg,
+    flexDirection: 'row',
+    overflow: 'hidden',
+  },
+  splitBarFill: { backgroundColor: colors.primary, borderRadius: 4 },
 
   // done
   doneWrap: { alignItems: 'center', padding: spacing.lg, paddingBottom: 60 },

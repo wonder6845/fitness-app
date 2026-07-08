@@ -254,6 +254,20 @@ export default function SessionDetailScreen({ navigation, route }: Props) {
             </View>
           ))}
 
+          {rec.bodyPart === '유산소' &&
+          rec.sets.some((s) => (s.splitsSec?.length ?? 0) > 0) ? (
+            <Text style={styles.splitsLine}>
+              ⏱ 구간:{' '}
+              {rec.sets
+                .flatMap((s) => s.splitsSec ?? [])
+                .map(
+                  (sec, i) =>
+                    `${i + 1}k ${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, '0')}"`
+                )
+                .join(' · ')}
+            </Text>
+          ) : null}
+
           {rec.memo ? <Text style={styles.exMemo}>📝 {rec.memo}</Text> : null}
         </Card>
       ))}
@@ -330,6 +344,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   exMemo: { color: colors.sub, fontSize: 13, marginTop: spacing.sm },
+  splitsLine: { color: colors.sub, fontSize: 12, marginTop: spacing.sm },
   memoLabel: {
     color: colors.sub,
     fontSize: 13,
