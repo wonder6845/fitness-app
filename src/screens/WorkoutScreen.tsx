@@ -37,8 +37,10 @@ import {
 } from '../types';
 import { getCardioStats, isHealthAvailable } from '../utils/health';
 import { playBeep, playRestEndChime } from '../utils/sound';
+import LineChart, { ChartPoint } from '../components/LineChart';
 import {
   detectPRs,
+  exerciseProgress,
   prLabel,
   recommendNextWeight,
   WeightRecommendation,
@@ -99,6 +101,8 @@ export default function WorkoutScreen({ navigation, route }: Props) {
   const [completeSet, setCompleteSet] = useState<{ exIndex: number; setNo: number } | null>(null);
   // RPE 기반 자동 증량 결과 (운동 인덱스 → 권장)
   const [progressions, setProgressions] = useState<Record<number, WeightRecommendation>>({});
+  // 현재 운동의 무게 추이 그래프 토글
+  const [historyOpen, setHistoryOpen] = useState(false);
   // 휴식 단계별 사용자 지정 휴식 시간(초) 오버라이드
   const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
 
@@ -106,6 +110,16 @@ export default function WorkoutScreen({ navigation, route }: Props) {
     () => (meta ? buildSteps(meta.exercises, meta.readySec) : []),
     [meta]
   );
+
+  // 현재 운동의 세션별 최고 무게 추이 (그래프용) — 조기 return보다 앞(훅 순서 고정)
+  const historyPoints = useMemo<ChartPoint[]>(() => {
+    const step = steps[stepIndex];
+    const ex = step ? records[step.exIndex] : undefined;
+    if (!ex) return [];
+    return exerciseProgress(ex.exerciseId, sessions)
+      .filter((p) => p.maxWeight > 0)
+      .map((p) => ({ ts: p.ts, value: p.maxWeight }));
+  }, [steps, stepIndex, records, sessions]);
 
   // 완료 시 개인기록(PR) 감지
   const prs = useMemo(() => {
@@ -777,6 +791,43 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                 return `🔁 지난번 미완 — 같은 무게 재도전 (${p.weight}${meta.unit})`;
               })()}
             </Text>
+          )}
+
+          {/* 무게 기록 그래프 (세션별 최고 무게) */}
+          {historyPoints.length > 0 && (
+            <>
+              <Pressable
+                onPress={() => setHistoryOpen((v) => !v)}
+                style={styles.historyToggle}
+              >
+                <Ionicons
+                  name={historyOpen ? 'chevron-up' : 'trending-up'}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text style={styles.historyToggleText}>
+                  {historyOpen ? '무게 추이 접기' : '무게 추이 그래프'}
+                </Text>
+              </Pressable>
+              {historyOpen &&
+                (historyPoints.length >= 2 ? (
+                  <View style={styles.historyCard}>
+                    <Text style={styles.historyTitle}>
+                      {curEx?.exerciseName} · 세션별 최고 무게
+                    </Text>
+                    <LineChart
+                      data={historyPoints}
+                      color={colors.primary}
+                      unit={meta.unit}
+                      height={130}
+                    />
+                  </View>
+                ) : (
+                  <Text style={styles.historyEmpty}>
+                    기록이 2회 이상 쌓이면 그래프가 그려져요. (현재 1회)
+                  </Text>
+                ))}
+            </>
           )}
 
           {/* 현재 운동 세트 입력 */}
@@ -1523,6 +1574,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: spacing.sm,
   },
+  historyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  historyToggleText: { color: colors.primary, fontSize: 13, fontWeight: '800' },
+  historyCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  historyTitle: { color: colors.sub, fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  historyEmpty: { color: colors.faint, fontSize: 12, marginTop: spacing.sm },
   rpeBox: {
     alignSelf: 'stretch',
     backgroundColor: colors.card,
