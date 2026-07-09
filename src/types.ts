@@ -64,6 +64,7 @@ export interface SetRecord {
   distanceKm?: number; // 유산소: 거리(km, 선택)
   avgHr?: number; // 유산소: 평균 심박(bpm) — Apple Watch(HealthKit) 연동 시 자동 채움
   splitsSec?: number[]; // 유산소: km 구간 스플릿(각 1km 소요 초) — 러닝 모드에서 기록
+  splitsHr?: (number | null)[]; // 유산소: 구간별 평균 심박(bpm) — splitsSec과 같은 인덱스, 워치 연동 시
 }
 
 /** 한 운동에 대한 기록 (세트 묶음 + 메모) */

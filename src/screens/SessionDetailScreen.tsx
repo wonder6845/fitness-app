@@ -259,10 +259,16 @@ export default function SessionDetailScreen({ navigation, route }: Props) {
             <Text style={styles.splitsLine}>
               ⏱ 구간:{' '}
               {rec.sets
-                .flatMap((s) => s.splitsSec ?? [])
+                .flatMap((s) =>
+                  (s.splitsSec ?? []).map((sec, i) => ({
+                    sec,
+                    hr: s.splitsHr?.[i] ?? null,
+                  }))
+                )
                 .map(
-                  (sec, i) =>
-                    `${i + 1}k ${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, '0')}"`
+                  ({ sec, hr }, i) =>
+                    `${i + 1}k ${Math.floor(sec / 60)}'${String(sec % 60).padStart(2, '0')}"` +
+                    (hr ? ` ♥${hr}` : '')
                 )
                 .join(' · ')}
             </Text>

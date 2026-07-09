@@ -10,6 +10,22 @@ export interface CardioHealthStats {
   distanceKm: number | null; // 이동 거리(km)
 }
 
+// ── 심박 존(레벨) ──────────────────────────────────────────
+// 최대심박 약 190bpm(30세 기준, 220-나이) 가정의 5단계 존.
+export interface HrZone {
+  level: 1 | 2 | 3 | 4 | 5;
+  name: string;
+  color: string;
+}
+
+export function hrZone(bpm: number): HrZone {
+  if (bpm < 114) return { level: 1, name: '회복', color: '#5AA9FF' }; // <60%
+  if (bpm < 133) return { level: 2, name: '지방 연소', color: '#2DD4BF' }; // 60~70%
+  if (bpm < 152) return { level: 3, name: '유산소', color: '#CBFB45' }; // 70~80%
+  if (bpm < 171) return { level: 4, name: '무산소', color: '#FFC24B' }; // 80~90%
+  return { level: 5, name: '최대', color: '#FF7A7A' }; // 90%+
+}
+
 let Health: unknown = null;
 if (Platform.OS === 'ios') {
   try {

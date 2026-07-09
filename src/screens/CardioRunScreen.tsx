@@ -21,7 +21,7 @@ import { useApp } from '../store/AppContext';
 import { colors, radius, spacing } from '../theme';
 import { Equipment } from '../types';
 import { appAlert } from '../utils/dialog';
-import { getCardioStats, isHealthAvailable } from '../utils/health';
+import { getCardioStats, hrZone, isHealthAvailable } from '../utils/health';
 import { fmtClock, parseNum } from '../utils/helpers';
 import { buildSession } from '../workout/session';
 
@@ -52,6 +52,7 @@ export default function CardioRunScreen({ navigation }: Props) {
   const [gpsOn, setGpsOn] = useState<boolean | null>(null); // null=미시도
   const [saved, setSaved] = useState(false);
   const [splits, setSplits] = useState<number[]>([]); // km 구간 스플릿(각 1km 소요 초)
+  const [splitHrs, setSplitHrs] = useState<(number | null)[]>([]); // 구간별 평균 심박
 
   // 경과 시간 엔진 (일시정지 지원)
   const baseRef = useRef(0);
@@ -62,6 +63,7 @@ export default function CardioRunScreen({ navigation }: Props) {
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const lastPointRef = useRef<Location.LocationObject | null>(null);
   const splitsRef = useRef<number[]>([]);
+  const splitHrsRef = useRef<(number | null)[]>([]);
   const lastDistElapsedRef = useRef(0); // 마지막 거리 갱신 시점의 경과(ms)
   const lastSplitElapsedRef = useRef(0); // 마지막 km 완주 시점의 경과(ms)
 
@@ -87,15 +89,34 @@ export default function CardioRunScreen({ navigation }: Props) {
         if (boundary > prev) {
           const frac = Math.max(0, Math.min(1, (boundary - prev) / (next - prev)));
           const tAt = prevMs + frac * (nowMs - prevMs);
+          const segStartElapsed = lastSplitElapsedRef.current;
           splitsRef.current = [
             ...splitsRef.current,
-            Math.max(1, Math.round((tAt - lastSplitElapsedRef.current) / 1000)),
+            Math.max(1, Math.round((tAt - segStartElapsed) / 1000)),
           ];
+          splitHrsRef.current = [...splitHrsRef.current, null];
           lastSplitElapsedRef.current = tAt;
+
+          // 이 구간의 평균 심박 조회 (워치 있을 때만) — 경과→실제 시각 근사 변환
+          if (isHealthAvailable()) {
+            const idx = splitsRef.current.length - 1;
+            const wallNow = Date.now();
+            const wallStart = wallNow - (nowMs - segStartElapsed);
+            const wallEnd = wallNow - (nowMs - tAt);
+            getCardioStats(wallStart, wallEnd).then(({ avgHr }) => {
+              if (avgHr) {
+                splitHrsRef.current = splitHrsRef.current.map((v, i) =>
+                  i === idx ? avgHr : v
+                );
+                setSplitHrs(splitHrsRef.current);
+              }
+            });
+          }
         }
         boundary++;
       }
       setSplits(splitsRef.current);
+      setSplitHrs(splitHrsRef.current);
     }
     lastDistElapsedRef.current = nowMs;
     distanceRef.current = next;
@@ -176,6 +197,8 @@ export default function CardioRunScreen({ navigation }: Props) {
     distanceRef.current = 0;
     setSplits([]);
     splitsRef.current = [];
+    setSplitHrs([]);
+    splitHrsRef.current = [];
     lastDistElapsedRef.current = 0;
     lastSplitElapsedRef.current = 0;
     setPhase('running');
@@ -258,6 +281,9 @@ export default function CardioRunScreen({ navigation }: Props) {
               distanceKm: distanceKm > 0 ? Math.round(distanceKm * 100) / 100 : undefined,
               avgHr: hr ?? undefined,
               splitsSec: splitsRef.current.length > 0 ? splitsRef.current : undefined,
+              splitsHr: splitHrsRef.current.some((h) => h != null)
+                ? splitHrsRef.current
+                : undefined,
             },
           ],
           memo: '',
@@ -342,7 +368,19 @@ export default function CardioRunScreen({ navigation }: Props) {
             {(isHealthAvailable() || hr) && (
               <>
                 <View style={styles.mline} />
-                <Metric value={hr ? `${hr}` : '--'} label="심박수 ♥" hot />
+                <View style={{ alignItems: 'center', flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.metricValue,
+                      { color: hr ? hrZone(hr).color : '#FF7A7A' },
+                    ]}
+                  >
+                    {hr ? `${hr}` : '--'}
+                  </Text>
+                  <Text style={styles.metricLabel}>
+                    {hr ? `♥ Z${hrZone(hr).level} ${hrZone(hr).name}` : '심박수 ♥'}
+                  </Text>
+                </View>
               </>
             )}
           </View>
@@ -385,9 +423,17 @@ export default function CardioRunScreen({ navigation }: Props) {
               {splits.slice(-3).map((s, i) => {
                 const km = splits.length - Math.min(3, splits.length) + i + 1;
                 const isLatest = km === splits.length;
+                const shr = splitHrs[km - 1];
                 return (
                   <View key={km} style={styles.splitRow}>
                     <Text style={styles.splitKm}>{km} km</Text>
+                    {shr ? (
+                      <Text style={[styles.splitHr, { color: hrZone(shr).color }]}>
+                        ♥{shr}
+                      </Text>
+                    ) : (
+                      <View style={{ flex: 1 }} />
+                    )}
                     <Text
                       style={[styles.splitTime, isLatest && { color: colors.primary }]}
                     >
@@ -440,19 +486,34 @@ export default function CardioRunScreen({ navigation }: Props) {
               <Text style={styles.splitTitle}>km 구간 스플릿</Text>
               {(() => {
                 const fastest = Math.min(...splits);
-                return splits.map((s, i) => (
-                  <View key={i} style={styles.splitRow}>
-                    <Text style={styles.splitKm}>{i + 1} km</Text>
-                    <View style={styles.splitBarTrack}>
-                      <View style={[styles.splitBarFill, { flex: fastest / s }]} />
-                      <View style={{ flex: Math.max(0.001, 1 - fastest / s) }} />
+                return splits.map((s, i) => {
+                  const shr = splitHrs[i];
+                  return (
+                    <View key={i} style={styles.splitRow}>
+                      <Text style={styles.splitKm}>{i + 1} km</Text>
+                      <View style={styles.splitBarTrack}>
+                        <View style={[styles.splitBarFill, { flex: fastest / s }]} />
+                        <View style={{ flex: Math.max(0.001, 1 - fastest / s) }} />
+                      </View>
+                      {shr ? (
+                        <View style={styles.zoneChipWrap}>
+                          <Text style={[styles.splitHrText, { color: hrZone(shr).color }]}>
+                            ♥{shr}
+                          </Text>
+                          <View
+                            style={[styles.zoneChip, { backgroundColor: hrZone(shr).color }]}
+                          >
+                            <Text style={styles.zoneChipText}>Z{hrZone(shr).level}</Text>
+                          </View>
+                        </View>
+                      ) : null}
+                      <Text style={styles.splitTime}>
+                        {fmtSplit(s)}
+                        {s === fastest ? ' ⚡' : ''}
+                      </Text>
                     </View>
-                    <Text style={styles.splitTime}>
-                      {fmtSplit(s)}
-                      {s === fastest ? ' ⚡' : ''}
-                    </Text>
-                  </View>
-                ));
+                  );
+                });
               })()}
             </View>
           )}
@@ -659,6 +720,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   splitBarFill: { backgroundColor: colors.primary, borderRadius: 4 },
+  splitHr: { flex: 1, fontSize: 13, fontWeight: '800', textAlign: 'right' },
+  splitHrText: { fontSize: 12, fontWeight: '800' },
+  zoneChipWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  zoneChip: { borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 },
+  zoneChipText: { color: '#0c0d10', fontSize: 10, fontWeight: '900' },
 
   // done
   doneWrap: { alignItems: 'center', padding: spacing.lg, paddingBottom: 60 },
