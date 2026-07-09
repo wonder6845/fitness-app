@@ -21,6 +21,7 @@ const KEYS = {
   body: 'fa.body.v1',
   fivexfive: 'fa.fivexfive.v1',
   plan: 'fa.plan.v1',
+  theme: 'fa.theme.v1',
 };
 
 async function getJSON<T>(key: string, fallback: T): Promise<T> {
@@ -65,6 +66,9 @@ export const db = {
 
   loadPlan: () => getJSON<PlannedWorkout[]>(KEYS.plan, []),
   savePlan: (p: PlannedWorkout[]) => setJSON(KEYS.plan, p),
+
+  loadTheme: () => getJSON<string>(KEYS.theme, 'black'),
+  saveTheme: (t: string) => setJSON(KEYS.theme, t),
 
   loadFivexFive: () => getJSON<FiveByFiveProgram | null>(KEYS.fivexfive, null),
   saveFivexFive: (p: FiveByFiveProgram | null) =>

@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  rowSelected: { borderColor: colors.primary, backgroundColor: '#13203a' },
+  rowSelected: { borderColor: colors.primary, backgroundColor: colors.selectedBg },
   dot: { width: 10, height: 10, borderRadius: 5 },
   rowName: { color: colors.text, fontSize: 15, fontWeight: '600' },
   rowTag: { color: colors.sub, fontSize: 12, marginTop: 2 },

@@ -227,7 +227,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AppProvider>
-        <StatusBar style="light" />
+        <StatusBar style={colors.statusBar} />
         <Root />
         <DialogHost />
       </AppProvider>

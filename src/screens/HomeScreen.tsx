@@ -358,11 +358,11 @@ const styles = StyleSheet.create({
   draftSub: { color: colors.sub, fontSize: 13, marginTop: 1 },
   draftBtns: { flexDirection: 'row', gap: 8, alignItems: 'center' },
 
-  planCard: { marginBottom: spacing.lg, borderColor: colors.accent, backgroundColor: '#101c19' },
+  planCard: { marginBottom: spacing.lg, borderColor: colors.accent, backgroundColor: colors.accentSoft },
   runCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#16210f',
+    backgroundColor: colors.primarySoft,
     borderWidth: 1,
     borderColor: colors.primary,
     borderRadius: radius.lg,

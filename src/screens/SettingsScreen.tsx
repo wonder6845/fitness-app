@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,9 +11,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { appAlert } from '../utils/dialog';
 import { Card, ScreenHeader, SectionTitle } from '../components/ui';
+import { db } from '../storage/db';
 import { useApp } from '../store/AppContext';
 import { Unit } from '../types';
-import { colors, radius, spacing } from '../theme';
+import {
+  applyTheme,
+  colors,
+  getCurrentTheme,
+  radius,
+  spacing,
+  THEME_META,
+  THEMES,
+  ThemeName,
+} from '../theme';
 
 export default function SettingsScreen() {
   const {
@@ -23,9 +34,25 @@ export default function SettingsScreen() {
     resetAll,
   } = useApp();
   const insets = useSafeAreaInsets();
+  const [theme, setTheme] = useState<ThemeName>(getCurrentTheme());
 
   function setUnit(unit: Unit) {
     updateSettings({ unit });
+  }
+
+  function changeTheme(name: ThemeName) {
+    if (name === theme) return;
+    setTheme(name);
+    db.saveTheme(name);
+    applyTheme(name);
+    if (Platform.OS === 'web') {
+      // 화면들의 StyleSheet에 반영하려면 새로 로드해야 함
+      setTimeout(() => {
+        (globalThis as { location?: { reload: () => void } }).location?.reload();
+      }, 150);
+    } else {
+      appAlert('테마 변경됨', '앱을 완전히 종료했다가 다시 열면 적용됩니다.');
+    }
   }
 
   function confirmReset() {
@@ -45,6 +72,37 @@ export default function SettingsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
     >
       <ScreenHeader title="설정" subtitle="SETTINGS" />
+
+      {/* 테마 */}
+      <SectionTitle>테마</SectionTitle>
+      <Card style={{ marginBottom: spacing.xl }}>
+        <View style={styles.themeRow}>
+          {THEME_META.map((t) => {
+            const p = THEMES[t.key];
+            const on = theme === t.key;
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => changeTheme(t.key)}
+                style={[styles.themeChip, on && { borderColor: colors.primary }]}
+              >
+                <View style={[styles.swatch, { backgroundColor: p.bg }]}>
+                  <View style={[styles.swatchDot, { backgroundColor: p.primary }]} />
+                </View>
+                <Text style={[styles.themeLabel, on && { color: colors.text }]}>
+                  {t.emoji} {t.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={styles.themeHint}>
+          {Platform.OS === 'web'
+            ? '선택하면 바로 적용돼요'
+            : '선택 후 앱을 다시 열면 적용돼요'}
+        </Text>
+      </Card>
+
       {/* 단위 */}
       <SectionTitle>단위</SectionTitle>
       <Card style={{ marginBottom: spacing.xl }}>
@@ -220,6 +278,28 @@ function Divider() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: 48 },
+  themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  themeChip: {
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    minWidth: 76,
+  },
+  swatch: {
+    width: 44,
+    height: 30,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(128,128,128,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  swatchDot: { width: 14, height: 14, borderRadius: 7 },
+  themeLabel: { color: colors.sub, fontSize: 12, fontWeight: '700', marginTop: 6 },
+  themeHint: { color: colors.faint, fontSize: 11, marginTop: spacing.md },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
