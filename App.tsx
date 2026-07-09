@@ -13,6 +13,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DialogHost from './src/components/DialogHost';
+import IntroSplash from './src/components/IntroSplash';
 import { Loading } from './src/components/ui';
 import { RootStackParamList, TabParamList } from './src/navigation';
 import BodyScreen from './src/screens/BodyScreen';
@@ -224,12 +225,14 @@ function Root() {
 }
 
 export default function App() {
+  const [introDone, setIntroDone] = React.useState(false);
   return (
     <SafeAreaProvider>
       <AppProvider>
         <StatusBar style={colors.statusBar} />
         <Root />
         <DialogHost />
+        {!introDone && <IntroSplash onDone={() => setIntroDone(true)} />}
       </AppProvider>
     </SafeAreaProvider>
   );
