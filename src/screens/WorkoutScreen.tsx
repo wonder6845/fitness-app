@@ -37,7 +37,12 @@ import {
 } from '../types';
 import { getCardioStats, isHealthAvailable } from '../utils/health';
 import { playBeep, playRestEndChime } from '../utils/sound';
-import { detectPRs, prLabel } from '../utils/strength';
+import {
+  detectPRs,
+  prLabel,
+  recommendNextWeight,
+  WeightRecommendation,
+} from '../utils/strength';
 import {
   completedSetCount,
   fmtClock,
@@ -92,6 +97,8 @@ export default function WorkoutScreen({ navigation, route }: Props) {
   const [plateOpen, setPlateOpen] = useState(false);
   // 세트 완료 시 횟수 기록 모달 대상
   const [completeSet, setCompleteSet] = useState<{ exIndex: number; setNo: number } | null>(null);
+  // RPE 기반 자동 증량 결과 (운동 인덱스 → 권장)
+  const [progressions, setProgressions] = useState<Record<number, WeightRecommendation>>({});
   // 휴식 단계별 사용자 지정 휴식 시간(초) 오버라이드
   const [restOverrides, setRestOverrides] = useState<Record<number, number>>({});
 
@@ -238,7 +245,21 @@ export default function WorkoutScreen({ navigation, route }: Props) {
       startedAt,
       readySec,
     });
-    setRecords(makeInitialRecords(exs));
+    // RPE 기반 자동 증량: 지난 세션 성공(+RPE≤8)이면 +2.5kg 권장 무게로 프리필
+    const recs = makeInitialRecords(exs);
+    const progs: Record<number, WeightRecommendation> = {};
+    exs.forEach((ex, i) => {
+      if (ex.startWeight != null || ex.bodyPart === '유산소') return;
+      const p = recommendNextWeight(ex.exerciseId, ex.targetReps, sessions, settings.unit);
+      if (p && p.weight > 0) {
+        progs[i] = p;
+        recs[i].sets = recs[i].sets.map((s) =>
+          s.type === 'warmup' ? s : { ...s, weight: p.weight }
+        );
+      }
+    });
+    setProgressions(progs);
+    setRecords(recs);
     setStepIndex(0);
     stepIndexRef.current = 0;
     baseElapsedRef.current = 0;
@@ -735,6 +756,29 @@ export default function WorkoutScreen({ navigation, route }: Props) {
             </Text>
           )}
 
+          {/* RPE 기반 자동 증량 안내 */}
+          {curStep && progressions[curStep.exIndex] && (
+            <Text
+              style={[
+                styles.progNote,
+                progressions[curStep.exIndex].reason === 'success' && {
+                  color: colors.primary,
+                },
+              ]}
+            >
+              {(() => {
+                const p = progressions[curStep.exIndex];
+                if (p.reason === 'success') {
+                  return `📈 지난번 성공${p.rpe ? ` (RPE ${p.rpe})` : ''} → 자동 증량 +${p.delta}${meta.unit} = ${p.weight}${meta.unit}`;
+                }
+                if (p.reason === 'hardRpe') {
+                  return `😮‍💨 지난번 RPE ${p.rpe} — 이번엔 같은 무게 유지 (${p.weight}${meta.unit})`;
+                }
+                return `🔁 지난번 미완 — 같은 무게 재도전 (${p.weight}${meta.unit})`;
+              })()}
+            </Text>
+          )}
+
           {/* 현재 운동 세트 입력 */}
           {curEx && curStep && (
             <View style={styles.setTable}>
@@ -1207,6 +1251,68 @@ export default function WorkoutScreen({ navigation, route }: Props) {
               </View>
             )}
 
+            {/* RPE 기록 → 다음 운동 자동 증량에 반영 */}
+            {(() => {
+              const rows = records
+                .map((r, exIndex) => ({ r, exIndex }))
+                .filter(
+                  ({ r }) =>
+                    r.bodyPart !== '유산소' &&
+                    r.sets.some((s) => s.completed && s.type !== 'warmup' && s.weight > 0)
+                );
+              if (rows.length === 0) return null;
+              return (
+                <View style={styles.rpeBox}>
+                  <Text style={styles.rpeHeader}>오늘 얼마나 힘들었나요? (RPE)</Text>
+                  <Text style={styles.rpeSub}>
+                    8 이하면 다음에 +2.5{meta.unit} 자동 증량, 9~10이면 같은 무게 유지
+                  </Text>
+                  {rows.map(({ r, exIndex }) => {
+                    const workSets = r.sets.filter(
+                      (s) => s.completed && s.type !== 'warmup'
+                    );
+                    const lastSet = workSets[workSets.length - 1];
+                    if (!lastSet) return null;
+                    return (
+                      <View key={exIndex} style={styles.rpeRow}>
+                        <Text style={styles.rpeName} numberOfLines={1}>
+                          {r.exerciseName}
+                        </Text>
+                        <View style={styles.rpeChips}>
+                          {[6, 7, 8, 9, 10].map((v) => {
+                            const on = lastSet.rpe === v;
+                            return (
+                              <Pressable
+                                key={v}
+                                onPress={() =>
+                                  markSet(exIndex, lastSet.setNo, {
+                                    rpe: on ? undefined : v,
+                                  })
+                                }
+                                style={[
+                                  styles.rpeChip,
+                                  on && {
+                                    backgroundColor: v >= 9 ? colors.warn : colors.primary,
+                                    borderColor: v >= 9 ? colors.warn : colors.primary,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[styles.rpeChipText, on && { color: colors.onPrimary }]}
+                                >
+                                  {v}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              );
+            })()}
+
             <TextInput
               style={styles.memo}
               placeholder="오늘 운동 메모 (선택)"
@@ -1411,6 +1517,43 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
+  progNote: {
+    color: colors.sub,
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
+  rpeBox: {
+    alignSelf: 'stretch',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  rpeHeader: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  rpeSub: { color: colors.faint, fontSize: 11, marginTop: 3, marginBottom: spacing.sm },
+  rpeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    gap: 8,
+  },
+  rpeName: { color: colors.sub, fontSize: 13, fontWeight: '700', flex: 1 },
+  rpeChips: { flexDirection: 'row', gap: 5 },
+  rpeChip: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.inputBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rpeChipText: { color: colors.sub, fontSize: 13, fontWeight: '800' },
   prevRecord: {
     color: colors.accent,
     fontSize: 13,

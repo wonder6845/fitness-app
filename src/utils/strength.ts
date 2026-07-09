@@ -102,6 +102,56 @@ export function prLabel(pr: PR): string {
   return `${pr.value}${pr.unit} 최다 반복`;
 }
 
+// ── RPE 기반 자동 증량 (autoregulation) ─────────────────────
+// 지난 세션이 "성공"(모든 워킹 세트 완료 + 목표 횟수 달성)이고
+// RPE가 8 이하(또는 미기록)면 다음에 +2.5kg(/+5lb) 권장.
+// RPE 9~10이면 같은 무게 유지, 실패면 같은 무게 재도전.
+export interface WeightRecommendation {
+  weight: number; // 이번에 권장하는 무게
+  lastWeight: number; // 지난 세션 무게
+  delta: number; // 증량분 (0이면 유지)
+  rpe?: number; // 지난 세션에 기록된 RPE(최대값)
+  reason: 'success' | 'hardRpe' | 'retry';
+}
+
+export function recommendNextWeight(
+  exerciseId: string,
+  targetReps: number | undefined,
+  sessions: WorkoutSession[], // 최신순 정렬 가정
+  unit: string
+): WeightRecommendation | null {
+  for (const sess of sessions) {
+    const rec = sess.records.find((r) => r.exerciseId === exerciseId);
+    if (!rec || rec.bodyPart === '유산소') continue;
+    const work = rec.sets.filter((s) => s.type !== 'warmup');
+    const done = work.filter((s) => s.completed && !s.skipped && s.weight > 0);
+    if (done.length === 0) continue; // 무게 기록이 있는 가장 최근 세션을 찾음
+    const lastWeight = Math.max(...done.map((s) => s.weight));
+    const success =
+      work.every((s) => s.completed || s.skipped) &&
+      done.every((s) => (targetReps ? s.reps >= targetReps : s.reps > 0));
+    const rpes = done
+      .map((s) => s.rpe)
+      .filter((v): v is number => typeof v === 'number' && v > 0);
+    const rpe = rpes.length > 0 ? Math.max(...rpes) : undefined;
+    const inc = unit === 'lb' ? 5 : 2.5;
+    if (success && (rpe === undefined || rpe <= 8)) {
+      return {
+        weight: Math.round((lastWeight + inc) * 100) / 100,
+        lastWeight,
+        delta: inc,
+        rpe,
+        reason: 'success',
+      };
+    }
+    if (success) {
+      return { weight: lastWeight, lastWeight, delta: 0, rpe, reason: 'hardRpe' };
+    }
+    return { weight: lastWeight, lastWeight, delta: 0, rpe, reason: 'retry' };
+  }
+  return null;
+}
+
 /** 운동별 세션 시계열 포인트 (진행 그래프용) */
 export interface ProgressPoint {
   ts: number;
