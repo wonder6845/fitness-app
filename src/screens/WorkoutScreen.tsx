@@ -111,14 +111,20 @@ export default function WorkoutScreen({ navigation, route }: Props) {
     [meta]
   );
 
-  // 현재 운동의 세션별 최고 무게 추이 (그래프용) — 조기 return보다 앞(훅 순서 고정)
-  const historyPoints = useMemo<ChartPoint[]>(() => {
+  // 현재 운동의 세션별 최고 무게·추정 1RM 추이 (그래프용) — 조기 return보다 앞(훅 순서 고정)
+  const history = useMemo<{ weight: ChartPoint[]; e1rm: ChartPoint[] }>(() => {
     const step = steps[stepIndex];
     const ex = step ? records[step.exIndex] : undefined;
-    if (!ex) return [];
-    return exerciseProgress(ex.exerciseId, sessions)
-      .filter((p) => p.maxWeight > 0)
-      .map((p) => ({ ts: p.ts, value: p.maxWeight }));
+    if (!ex) return { weight: [], e1rm: [] };
+    const prog = exerciseProgress(ex.exerciseId, sessions);
+    return {
+      weight: prog
+        .filter((p) => p.maxWeight > 0)
+        .map((p) => ({ ts: p.ts, value: p.maxWeight })),
+      e1rm: prog
+        .filter((p) => p.max1RM > 0)
+        .map((p) => ({ ts: p.ts, value: Math.round(p.max1RM * 10) / 10 })),
+    };
   }, [steps, stepIndex, records, sessions]);
 
   // 완료 시 개인기록(PR) 감지
@@ -793,8 +799,8 @@ export default function WorkoutScreen({ navigation, route }: Props) {
             </Text>
           )}
 
-          {/* 무게 기록 그래프 (세션별 최고 무게) */}
-          {historyPoints.length > 0 && (
+          {/* 무게 기록 그래프 (세션별 최고 무게 + 추정 1RM) */}
+          {history.weight.length > 0 && (
             <>
               <Pressable
                 onPress={() => setHistoryOpen((v) => !v)}
@@ -810,13 +816,19 @@ export default function WorkoutScreen({ navigation, route }: Props) {
                 </Text>
               </Pressable>
               {historyOpen &&
-                (historyPoints.length >= 2 ? (
+                (history.weight.length >= 2 ? (
                   <View style={styles.historyCard}>
                     <Text style={styles.historyTitle}>
-                      {curEx?.exerciseName} · 세션별 최고 무게
+                      {curEx?.exerciseName} · 최고 무게 & 추정 1RM
                     </Text>
                     <LineChart
-                      data={historyPoints}
+                      data={history.weight}
+                      label="최고 무게"
+                      overlay={{
+                        data: history.e1rm,
+                        color: colors.accent,
+                        label: '추정 1RM',
+                      }}
                       color={colors.primary}
                       unit={meta.unit}
                       height={130}

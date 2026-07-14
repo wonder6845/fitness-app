@@ -11,18 +11,28 @@ export interface ChartPoint {
 /**
  * 간단한 SVG 라인 차트. 신체 기록 / 운동별 진행 그래프에 공용으로 사용.
  */
+export interface ChartOverlay {
+  data: ChartPoint[]; // 겹쳐 그릴 보조 시리즈 (점선)
+  color: string;
+  label?: string;
+}
+
 export default function LineChart({
   data,
   height = 160,
   color = colors.primary,
   unit = '',
   emptyText = '데이터가 부족해요',
+  label,
+  overlay,
 }: {
   data: ChartPoint[];
   height?: number;
   color?: string;
   unit?: string;
   emptyText?: string;
+  label?: string; // 범례용 메인 시리즈 이름 (overlay 있을 때 표시)
+  overlay?: ChartOverlay;
 }) {
   // 측정용 고정 viewBox (반응형: preserveAspectRatio none 으로 가로 늘림)
   const W = 320;
@@ -40,8 +50,11 @@ export default function LineChart({
     );
   }
 
-  const xs = data.map((d) => d.ts);
-  const ys = data.map((d) => d.value);
+  // 스케일은 오버레이 시리즈까지 합쳐서 계산 (두 라인이 한 좌표계에 놓이도록)
+  const overlayData = overlay && overlay.data.length >= 2 ? overlay.data : [];
+  const all = [...data, ...overlayData];
+  const xs = all.map((d) => d.ts);
+  const ys = all.map((d) => d.value);
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
@@ -52,8 +65,13 @@ export default function LineChart({
   const px = (x: number) => padL + ((x - minX) / spanX) * (W - padL - padR);
   const py = (y: number) => padT + (1 - (y - minY) / spanY) * (H - padT - padB);
 
+  const toPath = (ds: ChartPoint[]) =>
+    ds
+      .map((d, i) => `${i === 0 ? 'M' : 'L'}${px(d.ts).toFixed(1)},${py(d.value).toFixed(1)}`)
+      .join(' ');
   const pts = data.map((d) => ({ x: px(d.ts), y: py(d.value) }));
-  const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const path = toPath(data);
+  const overlayPath = overlayData.length >= 2 ? toPath(overlayData) : null;
 
   const last = data[data.length - 1].value;
   const first = data[0].value;
@@ -77,6 +95,18 @@ export default function LineChart({
         {/* 기준선 */}
         <Line x1={padL} y1={padT} x2={padL} y2={H - padB} stroke={colors.hairline} strokeWidth={1} />
         <Line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke={colors.hairline} strokeWidth={1} />
+        {/* 오버레이 라인 (점선) — 메인 라인 아래에 깔림 */}
+        {overlayPath && overlay && (
+          <Path
+            d={overlayPath}
+            stroke={overlay.color}
+            strokeWidth={2}
+            fill="none"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            strokeDasharray="6,5"
+          />
+        )}
         {/* 라인 */}
         <Path d={path} stroke={color} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
         {/* 점 */}
@@ -84,6 +114,15 @@ export default function LineChart({
           <Circle key={i} cx={p.x} cy={p.y} r={i === pts.length - 1 ? 4 : 2.5} fill={color} />
         ))}
       </Svg>
+      {/* 범례 (오버레이가 있을 때만) */}
+      {overlayPath && overlay && (
+        <View style={styles.legendRow}>
+          <View style={[styles.legendLine, { backgroundColor: color }]} />
+          <Text style={styles.legendText}>{label ?? '기록'}</Text>
+          <View style={[styles.legendDash, { borderColor: overlay.color }]} />
+          <Text style={styles.legendText}>{overlay.label ?? '보조'}</Text>
+        </View>
+      )}
       <View style={styles.axisRow}>
         <Text style={styles.axisText}>{fmtShort(minX)}</Text>
         <Text style={styles.axisText}>
@@ -107,4 +146,8 @@ const styles = StyleSheet.create({
   delta: { fontSize: 13, fontWeight: '800' },
   axisRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   axisText: { color: colors.faint, fontSize: 11 },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  legendLine: { width: 16, height: 3, borderRadius: 2 },
+  legendDash: { width: 16, height: 0, borderTopWidth: 2, borderStyle: 'dashed' },
+  legendText: { color: colors.sub, fontSize: 11, fontWeight: '700', marginRight: 8 },
 });
