@@ -1,8 +1,10 @@
 # 🏋️ 헬스 기록 앱 (Fitness Tracker)
 
-운동 루틴을 만들고, **준비 → 운동 → 휴식 타이머**로 세트를 진행하며, 세트별 무게·횟수·RPE를 기록하고, 달력·통계·신체 변화까지 한곳에서 관리하는 모바일 운동 기록 앱입니다.
+운동 루틴을 만들고, **준비 → 운동 → 휴식 타이머**로 세트를 진행하며, 세트별 무게·횟수·RPE를 기록하고, NRC 스타일 **러닝 모드**·**5×5 프로그램**·달력·통계·인바디까지 한곳에서 관리하는 모바일 운동 기록 앱입니다.
 
-서버·계정 없이 **기기 안에서만 동작하는 오프라인 앱**이며, 다크 테마 한국어 UI로 만들어졌습니다.
+서버·계정 없이 **기기 안에서만 동작하는 오프라인 앱**이며, 한국어 UI + 테마 5종(블랙/화이트/메탈/그린/버터)을 지원합니다.
+
+> 📖 **처음 쓰신다면 [유저 가이드](USER_GUIDE.md)를 먼저 보세요** — 화면별 사용법을 정리해 뒀습니다.
 
 <p>
   <img alt="Expo SDK 56" src="https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo&logoColor=white">
@@ -96,6 +98,8 @@
 > Node.js **20.19+** 권장
 
 ```bash
+git clone https://github.com/wonder6845/fitness-app.git
+cd fitness-app
 npm install      # 최초 1회
 npm start        # Expo 개발 서버 (QR 코드)
 ```
@@ -108,6 +112,25 @@ npm start        # Expo 개발 서버 (QR 코드)
 | 웹 미리보기 | `npm run web` |
 | 타입 검사 | `npx tsc --noEmit` |
 
+### 🍎 macOS에서 개발 시작하기
+
+```bash
+# 0) 준비물: Node 20.19+ (nvm 권장), Watchman(선택), Xcode(시뮬레이터/워치 빌드용)
+brew install node watchman   # 또는 nvm install 20
+
+# 1) 클론 & 설치
+git clone https://github.com/wonder6845/fitness-app.git
+cd fitness-app && npm install
+
+# 2) 실행
+npm run web     # 브라우저 미리보기 (가장 빠름)
+npm run ios     # Xcode 설치 시 iOS 시뮬레이터
+```
+
+- **앱 데이터는 git에 포함되지 않습니다** — 기록(AsyncStorage)은 기기/브라우저별 로컬 저장이라 새 환경에서는 빈 상태로 시작합니다.
+- Mac + Xcode가 있으면 이제 **iOS dev build / Apple Watch(HealthKit) / watchOS 앱**([watch-integration/](watch-integration/README.md)) 작업이 가능합니다: `npx expo run:ios` 또는 EAS 빌드.
+- 심박·GPS 기능은 웹에서 자동 비활성(모의: 콘솔에서 `globalThis.__fitHealthMock = {avgHr:142}`) — 실기기 빌드에서 실제 동작.
+
 ---
 
 ## 🧱 기술 스택
@@ -116,6 +139,7 @@ npm start        # Expo 개발 서버 (QR 코드)
 - **TypeScript**(strict) · React Navigation(Tabs + Native Stack)
 - 로컬 저장: `@react-native-async-storage/async-storage`
 - 그래픽/차트: `react-native-svg`(자체 라인 차트·바벨 그림) · `expo-linear-gradient`
+- 러닝/헬스: `expo-location`(GPS 거리) · `react-native-health`(HealthKit, dev build 선택)
 - 피드백: `expo-haptics`(진동) · Web Audio(웹 비프음) · `expo-keep-awake`
 - `react-native-web`으로 브라우저 미리보기 지원
 
@@ -124,21 +148,24 @@ npm start        # Expo 개발 서버 (QR 코드)
 ## 🗂️ 프로젝트 구조
 
 ```
-App.tsx                      # 네비게이션(탭 + 스택), 테마, Provider
+index.ts                     # 부트스트랩(저장된 테마 적용 → 앱 로드)
+App.tsx                      # 네비게이션(탭 + 스택), 테마, Provider, 스플래시
 src/
   types.ts                   # 데이터 모델
-  theme.ts                   # 다크 테마 / 부위별 색
+  theme.ts                   # 테마 5종(THEMES/applyTheme) / 부위별 색
   navigation.ts              # 네비게이션 파라미터 타입
   data/
-    exercises.ts             # 기본 운동 DB, 부위/기구 목록
+    exercises.ts             # 기본 운동 DB(브랜드 머신 포함), 부위/기구/브랜드
     programs.ts              # 추천 운동 프로그램
-    body.ts                  # 신체 측정 항목 정의
+    fivexfive.ts             # 5×5 엔진(일정 생성·A/B 교차·중량 추천·통계·알림)
+    body.ts                  # 인바디 측정 항목·BMI
   storage/db.ts              # AsyncStorage 영속화 계층
-  store/AppContext.tsx       # 전역 상태(루틴/세션/설정/신체/draft)
+  store/AppContext.tsx       # 전역 상태(루틴/세션/설정/신체/5×5/계획/draft)
   utils/
     helpers.ts               # id, 날짜/시간 포맷, 볼륨 계산
     plates.ts                # 원판 계산(구성/색/크기)
-    strength.ts              # 1RM 추정 · PR 감지 · 운동별 추이
+    strength.ts              # 1RM 추정 · PR 감지 · RPE 자동 증량 · 추이
+    health.ts                # Apple Watch/HealthKit(심박·거리) + 심박 존
     sound.ts                 # Web Audio 비프/차임
     dialog.ts                # 크로스플랫폼 alert
   workout/
@@ -146,20 +173,24 @@ src/
     session.ts               # 기록 초기화 · 상태 판정 · 세션 빌드
   components/
     ui.tsx                   # 공통 UI(Card/Btn/Pill/ProgressRing 등)
+    IntroSplash.tsx          # 기동 스플래시 애니메이션
     BarbellGraphic.tsx       # 바벨+원판 그림(공용)
     PlateCalculator.tsx      # 원판 계산기 모달
     PlateWeightInput.tsx     # 원판 ± / 무게 입력 → 원판 자동 계산
-    LineChart.tsx            # SVG 라인 차트
+    LineChart.tsx            # SVG 라인 차트(오버레이 시리즈 지원)
     DialogHost.tsx           # 인앱 다이얼로그
   screens/
-    HomeScreen.tsx           # 홈(빠른 시작 + 복구 배너 + 요약)
+    HomeScreen.tsx           # 홈(러닝 시작 + 오늘의 계획 + 빠른 시작)
     RoutinesScreen.tsx / RoutineEditScreen.tsx / ExercisePickerScreen.tsx
     ProgramsScreen.tsx / ProgramDetailScreen.tsx   # 운동 프로그램
+    FiveByFiveScreen.tsx / FiveByFiveSetupScreen.tsx / FiveByFiveStatsScreen.tsx  # 5×5
+    PlanEditScreen.tsx       # 운동 계획(날짜 선택 플래너)
     WorkoutScreen.tsx        # ⭐ 타이머 + 세트 기록 (핵심)
+    CardioRunScreen.tsx      # 🏃 러닝 모드(NRC 스타일: GPS·페이스·심박·스플릿)
     CalendarScreen.tsx / SessionDetailScreen.tsx   # 달력 · 세션 상세
-    StatsScreen.tsx          # 통계(1RM/PR/분포)
+    StatsScreen.tsx          # 통계(1RM/PR/분포/유산소)
     BodyScreen.tsx           # 인바디 기록 (BMI 자동 계산)
-    SettingsScreen.tsx       # 설정
+    SettingsScreen.tsx       # 설정(테마/단위/토글)
 watch-integration/           # Apple Watch / HealthKit 연동 가이드·코드(별도, 선택)
 ```
 
@@ -186,8 +217,12 @@ watch-integration/           # Apple Watch / HealthKit 연동 가이드·코드(
 | `fa.sessions.v1` | 운동 세션 기록 |
 | `fa.settings.v1` | 설정 |
 | `fa.customExercises.v1` | 커스텀 운동 |
-| `fa.body.v1` | 신체 기록 |
+| `fa.body.v1` | 인바디 기록 |
+| `fa.fivexfive.v1` | 5×5 프로그램 설정 |
+| `fa.plan.v1` | 운동 계획(플래너) |
+| `fa.theme.v1` | 선택한 테마 |
 | `fa.draft.v1` | 진행 중 임시 저장 |
+| `fa.seeded.v1` | 예시 루틴 시드 여부 |
 
 ---
 
