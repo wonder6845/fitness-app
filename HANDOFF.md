@@ -74,4 +74,4 @@
 
 - 사용자 선호: 한국어 대화, 기능은 "그냥 해줘" 스타일로 바로 구현 + 검증까지, **충돌/애매하면 먼저 질문**, 매 기능 완료 시 커밋+푸시
 - 스크린샷 재생성: 과거에 puppeteer-core 헤드리스로 캡처(스크립트는 임시 폴더라 삭제됨 — 필요 시 재작성)
-- 원본 대화 전문은 Windows PC의 `C:\Users\MZC\.claude\projects\C--Users-MZC\*.jsonl`에 있음(레포에는 미포함)
+- **대화 전문은 [docs/CONVERSATION_LOG.md](docs/CONVERSATION_LOG.md)** — 사용자↔Claude 발화 124턴 (도구 로그 제외). 원본 .jsonl은 Windows PC 로컬에만 있음
